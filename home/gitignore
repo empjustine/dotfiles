@@ -1,0 +1,41 @@
+# Ruby
+*.gem
+*.rbc
+.bundle
+.config
+coverage
+rdoc
+spec/reports
+test/tmp
+test/version_tmp
+tmp
+
+# YARD artifacts
+.yardoc
+_yardoc
+doc/
+
+# CVS
+/CVS/*
+*/CVS/*
+.cvsignore
+*/.cvsignore
+
+# Linux
+!.gitignore
+*~
+
+# Mercurial
+/.hg/*
+*/.hg/*
+.hgignore
+
+# Windows image file caches
+Thumbs.db
+# Folder config file
+Desktop.ini
+
+# vim:
+.*.sw[a-z]
+*.un~
+Session.vim

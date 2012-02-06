@@ -1,0 +1,135 @@
+set nocompatible
+set encoding=utf-8
+
+set modelines=0
+
+" vim-pathogen ---------------------------------------------------------------
+
+runtime bundle/vim-pathogen/autoload/pathogen.vim
+
+filetype off
+
+runtime bundle/tpope-vim-pathogen/autoload/pathogen.vim
+call pathogen#infect()
+call pathogen#helptags()
+
+set ttyfast
+
+" vim-colors-solarized -------------------------------------------------------
+
+syntax on
+filetype plugin on
+filetype indent on
+
+if has('gui_running')
+    set background=light
+else
+    set background=dark
+endif
+
+" let g:solarized_termtrans=1
+
+colorscheme solarized
+
+" vim-powerline --------------------------------------------------------------
+
+set t_Co=256
+
+let g:Powerline_symbols = 'fancy'
+set laststatus=2
+
+" interface settings ---------------------------------------------------------
+
+" set nowrap
+set colorcolumn=80
+
+set ruler
+set history=1000
+set showcmd
+set cmdheight=2
+set showmode
+
+" current line/column settings -----------------------------------------------
+
+set cursorline
+" set cursorcolumn
+
+" search settings ------------------------------------------------------------
+
+set ignorecase
+set smartcase
+set incsearch
+set hlsearch
+set showmatch
+
+
+set viminfo='100,f1
+
+" file settings --------------------------------------------------------------
+
+set noswapfile
+set nobackup
+set nowb
+
+set backupdir=$HOME/.vim/backup
+set backupcopy=yes                     " keep attributes of original file
+set backupskip=/tmp/*,$TMPDIR/*,$TMP/*,$TEMP/*
+set directory=~/.vim/swap,~/tmp,.      " keep swp files under ~/.vim/swap
+
+" Don’t add empty newlines at the end of files
+set binary
+set noeol
+
+" indent settings ------------------------------------------------------------
+
+set autoindent
+set smartindent
+set smarttab
+set shiftround
+set shiftwidth=2
+set softtabstop=2
+set tabstop=2
+set expandtab
+
+set backspace=indent,eol,start
+
+" ----- VTX -----
+set shiftwidth=4
+set softtabstop=4
+set tabstop=4
+" ----- VTX -----
+
+" whitespace visibility settings ---------------------------------------------
+
+set list
+set listchars=tab:▸\ ,trail:·
+" real tab:↹
+" set listchars=tab:▸\ ,eol:¬
+
+" folding settings -----------------------------------------------------------
+
+set foldmethod=indent
+set foldnestmax=3
+set nofoldenable
+
+" autocomplete settings ------------------------------------------------------
+
+set wildmenu
+set wildmode=list:longest
+
+" scrolling settings ---------------------------------------------------------
+
+set scrolloff=5
+set sidescrolloff=15
+set sidescroll=1
+
+" arrow navigation settings --------------------------------------------------
+
+" nnoremap <up> <nop>
+" nnoremap <down> <nop>
+" nnoremap <left> <nop>
+" nnoremap <right> <nop>
+" inoremap <up> <nop>
+" inoremap <down> <nop>
+" inoremap <left> <nop>
+" inoremap <right> <nop>

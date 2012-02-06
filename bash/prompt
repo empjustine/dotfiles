@@ -1,0 +1,32 @@
+#!/bin/bash
+echo "loading ~/dotfiles/bash/prompt"
+
+# Solarized Prompt
+# inspired by:
+# Sexy Bash Prompt, inspired by "Extravagant Zsh Prompt"
+# A big thanks to \amethyst on Freenode
+
+eval `dircolors -b ~/dotfiles/submodules/solarized/dircolors-solarized/dircolors.ansi-dark`
+
+# solarized color theme
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+BLUE=$(tput setaf 4)
+MAGENTA=$(tput setaf 5)
+CYAN=$(tput setaf 6)
+WHITE=$(tput setaf 7)
+
+BOLD=$(tput bold)
+RESET=$(tput sgr0)
+
+. ~/dotfiles/shell/short_env
+
+parse_git_dirty () {
+  [[ $(git status 2> /dev/null | tail -n1) != "nothing to commit (working directory clean)" ]] && echo "*"
+}
+parse_git_branch () {
+  git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e "s/* \(.*\)/\1$(parse_git_dirty)/"
+}
+
+export PS1="\$(history -a)\[$RESET\]\[$CYAN\]\$S_HORTPS_1 \[$MAGENTA\]\w \[$RED\]\$(parse_git_branch)\[$WHITE\]\n\$ \[$RESET\]"

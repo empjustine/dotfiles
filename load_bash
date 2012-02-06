@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "loading ~/dotfiles/load_bash"
+
+. ~/dotfiles/shell/rbenv
+. ~/dotfiles/shell/exports
+
+. ~/dotfiles/bash/alias
+. ~/dotfiles/bash/history
+. ~/dotfiles/bash/prompt
+. ~/dotfiles/bash/title
+
+. ~/dotfiles/bash/completion/bundler
+. ~/dotfiles/bash/completion/rake
