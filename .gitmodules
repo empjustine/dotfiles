@@ -7,6 +7,10 @@ url = git://github.com/basho/rebar.git
 [submodule "github.com/sstephenson/ruby-build"]
 path = submodules/ruby-build
 url = git://github.com/sstephenson/ruby-build.git
+[submodule "github.com/adamwiggins/rush"]
+path = submodules/rush
+url = git://github.com/adamwiggins/rush.git
+
 
 [submodule "github.com/seebi/dircolors-solarized"]
 path = submodules/solarized/dircolors-solarized
