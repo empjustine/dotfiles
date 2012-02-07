@@ -17,6 +17,9 @@ url = git://github.com/sigurdga/gnome-terminal-colors-solarized.git
 [submodule "github.com/craig552uk/solarized-gedit"]
 path = submodules/solarized/solarized-gedit
 url = git://github.com/craig552uk/solarized-gedit.git
+[submodule "github.com/codebrainz/geany-themes"]
+path = submodules/solarized/geany-themes
+url = git://github.com/codebrainz/geany-themes
 
 [submodule "github.com/altercation/vim-colors-solarized"]
 path = submodules/vim/bundle/vim-colors-solarized

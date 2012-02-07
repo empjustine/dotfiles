@@ -11,6 +11,6 @@ export HISTSIZE=10000
 
 # Make some commands not show up in history
 export HISTCONTROL=ignoredups
-export HISTIGNORE="ls:ls *:cd:cd -:pwd;exit:date:reset:.."
+export HISTIGNORE="ls:ls *:cd:cd -:cd ~:pwd:exit:date:reset:clear:.."
 
 shopt -s histappend
