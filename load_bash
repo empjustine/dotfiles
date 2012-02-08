@@ -2,6 +2,7 @@
 echo "loading ~/dotfiles/load_bash"
 
 . ~/dotfiles/shell/rbenv
+. ~/dotfiles/shell/nodejs
 . ~/dotfiles/shell/exports
 
 . ~/dotfiles/bash/alias
