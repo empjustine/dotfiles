@@ -6,7 +6,7 @@ set input-meta on
 set convert-meta off
 set output-meta on
 
-set horizontal-scroll-mode on
+set horizontal-scroll-mode off
 set history-preserve-point on
 set mark-directories on
 # Immediately add a trailing slash when autocompleting symlinks to directories
