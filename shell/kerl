@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "loading ~/dotfiles/shell/kerl"
+
+. ~/.erl-r15b/activate

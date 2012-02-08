@@ -1,2 +1,3 @@
 #!/bin/sh
+echo "loading ~/dotfiles/shell/nodejs"
 #export PATH="$PATH:~/opt/bin"

@@ -10,7 +10,7 @@ export HISTSIZE=10000
 #export PROMPT_COMMAND="history -a"
 
 # Make some commands not show up in history
-export HISTCONTROL=ignoredups
-export HISTIGNORE="ls:ls *:cd:cd -:cd ~:pwd:exit:date:reset:clear:.."
+export HISTCONTROL=ignoreboth:erasedups
+export HISTIGNORE="ls:ls *:cd:cd -:cd ~:pwd:exit:date:reset:clear:..:history:h:bg:fg:ps"
 
 shopt -s histappend
