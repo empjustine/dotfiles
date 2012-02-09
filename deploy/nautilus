@@ -12,3 +12,5 @@ gconftool-2 -s -t bool /desktop/gnome/background/draw_background false
 gconftool-2 --set --type=string /desktop/gnome/url-handlers/file/command 'nautilus "%s"'
 gconftool-2 --set --type=bool /desktop/gnome/url-handlers/file/enabled true
 gconftool-2 --set --type=bool /desktop/gnome/url-handlers/file/need-terminal false
+gsettings set org.gnome.desktop.default-applications.terminal exec /usr/bin/xfce4-terminal
+sudo apt-get install libgnome2-0

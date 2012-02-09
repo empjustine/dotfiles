@@ -54,3 +54,6 @@
 [submodule "github.com/vim-ruby/vim-ruby"]
 	path = submodules/vim/bundle/vim-ruby
 	url = git://github.com/vim-ruby/vim-ruby.git
+[submodule "submodules/solarized/solarized"]
+	path = submodules/solarized/solarized
+	url = git://github.com/altercation/solarized.git
