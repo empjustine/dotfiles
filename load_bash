@@ -6,11 +6,11 @@ echo "loading ~/dotfiles/load_bash"
 . ~/dotfiles/shell/kerl
 . ~/dotfiles/shell/exports
 . ~/dotfiles/shell/rubygems-bundler
+. ~/dotfiles/shell/short_env
 
 . ~/dotfiles/bash/alias
+. ~/dotfiles/bash/autocomplete
 . ~/dotfiles/bash/history
 . ~/dotfiles/bash/prompt
 . ~/dotfiles/bash/title
 
-. ~/dotfiles/bash/completion/bundler
-. ~/dotfiles/bash/completion/rake

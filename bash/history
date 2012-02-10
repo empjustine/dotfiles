@@ -4,10 +4,11 @@ echo "loading ~/dotfiles/bash/history"
 unset HISTFILESIZE
 
 # maximum in-memory history lines
-export HISTSIZE=10000
+# 2**32 - 1
+export HISTSIZE=32767
 
 # Make some commands not show up in history
 export HISTCONTROL=ignoreboth:erasedups
-export HISTIGNORE="ls:ls *:cd:cd -:cd ~:pwd:exit:date:reset:clear:..:history:h:bg:fg:ps"
+export HISTIGNORE="ls:ls *:cd:cd -:cd ~:pwd:exit:date:reset:clear:..:history:h:bg:fg:ps:date:* --help:"
 
 shopt -s histappend
