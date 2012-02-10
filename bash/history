@@ -6,9 +6,6 @@ unset HISTFILESIZE
 # maximum in-memory history lines
 export HISTSIZE=10000
 
-# writes history after every command
-#export PROMPT_COMMAND="history -a"
-
 # Make some commands not show up in history
 export HISTCONTROL=ignoreboth:erasedups
 export HISTIGNORE="ls:ls *:cd:cd -:cd ~:pwd:exit:date:reset:clear:..:history:h:bg:fg:ps"
