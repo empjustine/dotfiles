@@ -40,3 +40,7 @@ end
 def r
   reload!
 end
+
+require 'pp'
+require 'colored'
+
