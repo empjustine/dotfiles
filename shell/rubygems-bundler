@@ -1,4 +1,0 @@
-#!/bin/sh
-echo "loading ~/dotfiles/shell/rubygems-bundler"
-
-export USE_BUNDLER=force

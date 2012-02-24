@@ -2,7 +2,8 @@
 
 sudo apt-get install xsltproc
 
-hg clone http://hg.rabbitmq.com/rabbitmq-codegen ~/.rabbitmq/rabbitmq-codegen
-hg clone http://hg.rabbitmq.com/rabbitmq-server ~/.rabbitmq/rabbitmq-server
-cd ~/.rabbitmq/rabbitmq-server
+hg clone http://hg.rabbitmq.com/rabbitmq-codegen ~/build/rabbitmq-codegen
+hg clone http://hg.rabbitmq.com/rabbitmq-server ~/build/rabbitmq-server
+
+cd ~/build/rabbitmq-server
 make

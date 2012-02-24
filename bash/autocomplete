@@ -6,5 +6,4 @@ echo "loading ~/dotfiles/bash/autocomplete"
 
 echo "loading submodule ~/dotfiles/submodules/kerl/bash_completion/kerl"
 . ~/dotfiles/submodules/kerl/bash_completion/kerl
-echo "loading submodule ~/dotfiles/submodules/kerl/bash_completion/kerl ok"
 
