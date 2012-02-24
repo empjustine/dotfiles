@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "loading ~/dotfiles/shell/short_env"
-BYTESIZE=5
+BYTESIZE=16
 export U_SERNAM_E=$(whoami | head -c $BYTESIZE)
 export H_OSTNAM_E=$(hostname | head -c $BYTESIZE)
 export S_HORTPS_1="$U_SERNAM_E@$H_OSTNAM_E"
