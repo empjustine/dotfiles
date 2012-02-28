@@ -8,9 +8,11 @@ ln -s ~/dotfiles/home/gitignore ~/.gitignore
 ln -s ~/dotfiles/home/gitk ~/.gitk
 ln -s ~/dotfiles/home/inputrc ~/.inputrc
 
-ln -s ~/dotfiles/submodules/kerl/kerl ~/bin/
-ln -s ~/dotfiles/submodules/ruby-build/bin/rbenv-install ~/bin/
-ln -s ~/dotfiles/submodules/ruby-build/bin/ruby-build ~/bin/
+mkdir -p ~/bin
+
+ln -s ~/dotfiles/submodules/kerl/kerl ~/bin
+ln -s ~/dotfiles/submodules/ruby-build/bin/rbenv-install ~/bin
+ln -s ~/dotfiles/submodules/ruby-build/bin/ruby-build ~/bin
 
 ln -s ~/dotfiles/submodules/vim/ ~/.vim
 

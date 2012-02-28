@@ -1,4 +1,4 @@
 #!/bin/sh
 echo "loading ~/dotfiles/shell/node"
 
-export PATH=~/bin/.node:${PATH}
+export PATH="$HOME/bin/.node:$PATH"

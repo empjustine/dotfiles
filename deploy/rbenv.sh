@@ -5,4 +5,4 @@ DESTINATION=~/.rbenv
 REPOSITORY="git://github.com/sstephenson/rbenv.git"
 
 rm -rf DESTINATION
-git clone $RBENV_REPOSITORY $DESTINATION
+git clone $REPOSITORY $DESTINATION
