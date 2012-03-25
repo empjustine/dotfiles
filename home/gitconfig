@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 [user]
   name = emp.justine
   email = emp.justine@gmail.com
@@ -51,7 +52,11 @@
   # http://gitfu.wordpress.com/2008/04/20/git-rerere-rereremember-what-you-did-last-time/
   enabled = true
 [gui]
-[gui]
-	fontui = -family DINPro -size 9 -weight normal -slant roman -underline 0 -overstrike 0
-	fontdiff = -family \"Inconsolata-dz for Powerline\" -size -12 -weight normal -slant roman -underline 0 -overstrike 0
-	commitmsgwidth = 80
+  fontui = -family DINPro -size 9 -weight normal -slant roman -underline 0 -overstrike 0
+  fontdiff = -family \"Inconsolata-dz for Powerline\" -size -12 -weight normal -slant roman -underline 0 -overstrike 0
+  commitmsgwidth = 80
+[alias]
+  ush = push
+  ull = pull
+# úsh = push
+# úll = pull

@@ -7,6 +7,7 @@ ln -s ~/dotfiles/home/gitconfig ~/.gitconfig
 ln -s ~/dotfiles/home/gitignore ~/.gitignore
 ln -s ~/dotfiles/home/gitk ~/.gitk
 ln -s ~/dotfiles/home/inputrc ~/.inputrc
+ln -s ~/dotfiles/home/irbrc ~/.irbrc
 
 mkdir -p ~/bin
 

@@ -1,0 +1,21 @@
+[global_config]
+  dbus = True
+[keybindings]
+[profiles]
+  [[default]]
+    login_shell = True
+    visible_bell = True
+    background_darkness = 0.8
+    audible_bell = True
+    background_type = transparent
+    scroll_on_output = False
+    scrollback_infinite = True
+[layouts]
+  [[default]]
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+    [[[window0]]]
+      type = Window
+      parent = ""
+[plugins]
