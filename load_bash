@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "loading ~/dotfiles/load_bash"
 
-if [ -z "$LOAD_BASH" ]; then
+#if [ -z "$LOAD_BASH" ]; then
 
   . ~/dotfiles/shell/rbenv
   . ~/dotfiles/shell/node
@@ -16,6 +16,6 @@ if [ -z "$LOAD_BASH" ]; then
   . ~/dotfiles/bash/title
 
   export LOAD_BASH=TRUE
-else
-  echo "bash environment preloaded"
-fi
+#else
+#  echo "bash environment preloaded"
+#fi
