@@ -13,6 +13,7 @@ IRB.conf[:AUTO_INDENT] = true
 IRB.conf[:USE_READLINE] = true
 
 class Object
+
   # list methods which aren't in superclass
   def local_methods(obj = self)
     (obj.methods - obj.class.superclass.instance_methods).sort
@@ -32,6 +33,9 @@ class Object
     puts `ri '#{method}'`
   end
 end
+
+AL = 'a'.upto('z').map { |letter| ":#{letter}" }
+AU = 'A'.upto('Z').map { |letter| ":#{letter}" }
 
 require 'pp'
 require 'colored'
