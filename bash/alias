@@ -30,7 +30,7 @@ alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 # IP addresses
 alias myip="dig +short myip.opendns.com @resolver1.opendns.com"
 
-#DWIM
+# DWIM
 alias vo,=vim
 alias vom=vim
 alias bim=vim

@@ -1,21 +1,13 @@
 #!/bin/bash
 echo "loading ~/dotfiles/load_bash"
 
-#if [ -z "$LOAD_BASH" ]; then
+. ~/dotfiles/shell/rbenv
+. ~/dotfiles/shell/node
+. ~/dotfiles/shell/kerl
+. ~/dotfiles/shell/exports
 
-  . ~/dotfiles/shell/rbenv
-  . ~/dotfiles/shell/node
-  . ~/dotfiles/shell/kerl
-  . ~/dotfiles/shell/exports
-  . ~/dotfiles/shell/short_env
+. ~/dotfiles/bash/alias
+. ~/dotfiles/bash/autocomplete
+. ~/dotfiles/bash/history
+. ~/dotfiles/bash/prompt
 
-  . ~/dotfiles/bash/alias
-  . ~/dotfiles/bash/autocomplete
-  . ~/dotfiles/bash/history
-  . ~/dotfiles/bash/prompt
-  . ~/dotfiles/bash/title
-
-  export LOAD_BASH=TRUE
-#else
-#  echo "bash environment preloaded"
-#fi

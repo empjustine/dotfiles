@@ -3,12 +3,14 @@
 [keybindings]
 [profiles]
   [[default]]
+    use_system_font = False
     login_shell = True
     visible_bell = True
     background_darkness = 0.8
     audible_bell = True
     background_type = transparent
     scroll_on_output = False
+    font = Inconsolata-dz for Powerline Medium 12
     scrollback_infinite = True
 [layouts]
   [[default]]
