@@ -1,12 +1,12 @@
 #!/bin/bash
-echo "loading ~/dotfiles/bash/prompt"
+echo "loading ~/.dotfiles/bash/prompt"
 
 # Solarized Prompt
 # inspired by:
 # Sexy Bash Prompt, inspired by "Extravagant Zsh Prompt"
 # A big thanks to \amethyst on Freenode
 
-eval `dircolors -b ~/dotfiles/submodules/solarized/dircolors-solarized/dircolors.ansi-dark`
+eval `dircolors -b ~/.dotfiles/submodules/solarized/dircolors-solarized/dircolors.ansi-dark`
 
 # solarized color theme
 RED=$(tput setaf 1)

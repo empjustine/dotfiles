@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "loading ~/dotfiles/bash/aliases/bundle"
+echo "loading ~/.dotfiles/bash/aliases/bundle"
 
 alias 'bi'='bundle install --path vendor'
 alias 'bx'='bundle exec'

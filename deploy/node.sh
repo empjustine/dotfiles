@@ -1,6 +1,6 @@
 #!/bin/sh
 
-git clone https://github.com/joyent/node.git ~/build/node
+git clone https://github.com/joyent/node.git ~/repos/node
 cd ~/build/node
 
 mkdir -p ~/bin/.node

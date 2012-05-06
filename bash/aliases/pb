@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "loading ~/dotfiles/bash/aliases/pb"
+echo "loading ~/.dotfiles/bash/aliases/pb"
 
 alias pbcopy='xclip -selection clipboard'
 alias pbpaste='xclip -selection clipboard -o'
