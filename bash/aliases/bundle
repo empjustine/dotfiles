@@ -1,6 +1,0 @@
-#!/bin/bash
-echo "loading ~/.dotfiles/bash/aliases/bundle"
-
-alias 'bi'='bundle install --path vendor'
-alias 'bx'='bundle exec'
-alias 'bu'='bundle update'

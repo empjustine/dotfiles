@@ -1,5 +1,5 @@
 #!/bin/sh
-echo "loading ~/.dotfiles/shell/exports"
+
 # Make vim the default editor
 export EDITOR="vim"
 # Don’t clear the screen after quitting a manual page

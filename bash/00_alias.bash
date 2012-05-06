@@ -1,8 +1,4 @@
 #!/bin/bash
-echo "loading ~/.dotfiles/bash/alias"
-
-. ~/.dotfiles/bash/aliases/pb
-. ~/.dotfiles/bash/aliases/bundle
 
 alias ls='ls --color '
 

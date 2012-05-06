@@ -1,13 +1,11 @@
-#!/bin/bash
-echo "loading ~/.dotfiles/load_bash"
+#!/bin/sh
 
-. ~/.dotfiles/shell/rbenv
-. ~/.dotfiles/shell/node
-. ~/.dotfiles/shell/kerl
-. ~/.dotfiles/shell/exports
+for file in ~/.dotfiles/**/[0-9][0-9]_*.sh; do
+  echo "autoloading $file"
+  . $file
+done
 
-. ~/.dotfiles/bash/alias
-. ~/.dotfiles/bash/autocomplete
-. ~/.dotfiles/bash/history
-. ~/.dotfiles/bash/prompt
-
+for file in ~/.dotfiles/**/[0-9][0-9]_*.bash; do
+  echo "autoloading $file"
+  . $file
+done

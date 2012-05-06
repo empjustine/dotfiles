@@ -1,5 +1,4 @@
 #!/bin/bash
-echo "loading ~/.dotfiles/bash/prompt"
 
 # Solarized Prompt
 # inspired by:

@@ -1,5 +1,4 @@
 #!/bin/sh
 
-echo "loading ~/.dotfiles/shell/rbenv"
 export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"

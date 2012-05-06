@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "loading ~/.dotfiles/bash/history"
+
 # limitless .bash_history
 unset HISTFILESIZE
 

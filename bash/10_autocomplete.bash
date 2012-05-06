@@ -1,9 +1,7 @@
 #!/bin/bash
-echo "loading ~/.dotfiles/bash/autocomplete"
 
 . ~/.dotfiles/bash/completion/bundler
 . ~/.dotfiles/bash/completion/rake
 
-echo "loading submodule ~/.dotfiles/submodules/kerl/bash_completion/kerl"
 . ~/.dotfiles/submodules/kerl/bash_completion/kerl
 
