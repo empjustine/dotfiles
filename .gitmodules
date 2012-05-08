@@ -57,3 +57,6 @@
 [submodule "submodules/solarized/solarized"]
 	path = submodules/solarized/solarized
 	url = git://github.com/altercation/solarized.git
+[submodule "submodule/gitignore"]
+	path = submodule/gitignore
+	url = git://github.com/github/gitignore.git

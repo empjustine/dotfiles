@@ -1,4 +1,7 @@
 #!/bin/sh
+sudo apt-get install openssl
+gem install mongo
+
 gem install bundler
 gem install rush
 
