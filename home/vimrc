@@ -30,7 +30,7 @@ endif
 " let g:solarized_termtrans=1
 
 let g:solarized_termcolors=256
-let g:solarized_visibility="low"
+let g:solarized_visibility="high"
 
 colorscheme solarized
 
@@ -97,11 +97,11 @@ set expandtab
 set backspace=indent,eol,start
 
 " ----- VTX -----
-set shiftwidth=4
-set softtabstop=4
-set tabstop=4
-set diffopt=filler
-set diffopt+=iwhite " ignore whitespace
+" set shiftwidth=4
+" set softtabstop=4
+" set tabstop=4
+" set diffopt=filler
+" set diffopt+=iwhite " ignore whitespace
 " ----- VTX -----
 
 " whitespace visibility settings ---------------------------------------------
@@ -138,3 +138,14 @@ set sidescroll=1
 " inoremap <down> <nop>
 " inoremap <left> <nop>
 " inoremap <right> <nop>
+
+" magic paste mode (disables intelligent handling of input) ----------------
+
+" Easy window navigation
+map <C-h> <C-w>h
+map <C-j> <C-w>j
+map <C-k> <C-w>k
+map <C-l> <C-w>l
+
+nnoremap ; :
+set pastetoggle=<F2>

@@ -1,62 +1,66 @@
 [submodule "github.com/spawngrid/kerl"]
-	path = submodules/kerl
-	url = git://github.com/spawngrid/kerl.git
+  path = submodules/kerl
+  url = git://github.com/spawngrid/kerl.git
 [submodule "github.com/basho/rebar"]
-	path = submodules/rebar
-	url = git://github.com/basho/rebar.git
+  path = submodules/rebar
+  url = git://github.com/basho/rebar.git
 [submodule "github.com/sstephenson/ruby-build"]
-	path = submodules/ruby-build
-	url = git://github.com/sstephenson/ruby-build.git
+  path = submodules/ruby-build
+  url = git://github.com/sstephenson/ruby-build.git
 [submodule "github.com/adamwiggins/rush"]
-	path = submodules/rush
-	url = git://github.com/adamwiggins/rush.git
+  path = submodules/rush
+  url = git://github.com/adamwiggins/rush.git
 
 [submodule "github.com/seebi/dircolors-solarized"]
-	path = submodules/solarized/dircolors-solarized
-	url = git://github.com/seebi/dircolors-solarized.git
+  path = submodules/solarized/dircolors-solarized
+  url = git://github.com/seebi/dircolors-solarized.git
 [submodule "github.com/sigurdga/gnome-terminal-colors-solarized"]
-	path = submodules/solarized/gnome-terminal-colors-solarized
-	url = git://github.com/sigurdga/gnome-terminal-colors-solarized.git
+  path = submodules/solarized/gnome-terminal-colors-solarized
+  url = git://github.com/sigurdga/gnome-terminal-colors-solarized.git
 [submodule "github.com/craig552uk/solarized-gedit"]
-	path = submodules/solarized/solarized-gedit
-	url = git://github.com/craig552uk/solarized-gedit.git
+  path = submodules/solarized/solarized-gedit
+  url = git://github.com/craig552uk/solarized-gedit.git
 [submodule "github.com/codebrainz/geany-themes"]
-	path = submodules/solarized/geany-themes
-	url = git://github.com/codebrainz/geany-themes
+  path = submodules/solarized/geany-themes
+  url = git://github.com/codebrainz/geany-themes
 [submodule "submodules/solarized/xfce4-terminal-colors-solarized"]
-	path = submodules/solarized/xfce4-terminal-colors-solarized
-	url = git://github.com/sgerrand/xfce4-terminal-colors-solarized.git
+  path = submodules/solarized/xfce4-terminal-colors-solarized
+  url = git://github.com/sgerrand/xfce4-terminal-colors-solarized.git
 [submodule "submodules/solarized/gnome-theme-darksolarized"]
-	path = submodules/solarized/gnome-theme-darksolarized
-	url = git://github.com/NPerry/gnome-theme-darksolarized.git
+  path = submodules/solarized/gnome-theme-darksolarized
+  url = git://github.com/NPerry/gnome-theme-darksolarized.git
 [submodule "/home/empjustine/dotfiles/submodules/solarized/eclipse-color-theme"]
-	path = submodules/solarized/eclipse-color-theme
-	url = git://github.com/eclipse-color-theme/eclipse-color-theme.git
+  path = submodules/solarized/eclipse-color-theme
+  url = git://github.com/eclipse-color-theme/eclipse-color-theme.git
 
 [submodule "github.com/altercation/vim-colors-solarized"]
-	path = submodules/vim/bundle/vim-colors-solarized
-	url = git://github.com/altercation/vim-colors-solarized.git
+  path = submodules/vim/bundle/vim-colors-solarized
+  url = git://github.com/altercation/vim-colors-solarized.git
 [submodule "github.com/nathanaelkane/vim-indent-guides"]
-	path = submodules/vim/bundle/vim-indent-guides
-	url = git://github.com/nathanaelkane/vim-indent-guides.git
+  path = submodules/vim/bundle/vim-indent-guides
+  url = git://github.com/nathanaelkane/vim-indent-guides.git
 [submodule "github.com/gmunkhbaatarmn/vim-largefile"]
-	path = submodules/vim/bundle/vim-largefile
-	url = git://github.com/gmunkhbaatarmn/vim-largefile.git
+  path = submodules/vim/bundle/vim-largefile
+  url = git://github.com/gmunkhbaatarmn/vim-largefile.git
 [submodule "github.com/tpope/vim-pathogen"]
-	path = submodules/vim/bundle/vim-pathogen
-	url = git://github.com/tpope/vim-pathogen.git
+  path = submodules/vim/bundle/vim-pathogen
+  url = git://github.com/tpope/vim-pathogen.git
 [submodule "github.com/Lokaltog/vim-powerline"]
-	path = submodules/vim/bundle/vim-powerline
-	url = git://github.com/Lokaltog/vim-powerline.git
+  path = submodules/vim/bundle/vim-powerline
+  url = git://github.com/Lokaltog/vim-powerline.git
 [submodule "github.com/skwp/vim-rspec"]
-	path = submodules/vim/bundle/vim-rspec
-	url = git://github.com/skwp/vim-rspec.git
+  path = submodules/vim/bundle/vim-rspec
+  url = git://github.com/skwp/vim-rspec.git
 [submodule "github.com/vim-ruby/vim-ruby"]
-	path = submodules/vim/bundle/vim-ruby
-	url = git://github.com/vim-ruby/vim-ruby.git
+  path = submodules/vim/bundle/vim-ruby
+  url = git://github.com/vim-ruby/vim-ruby.git
 [submodule "submodules/solarized/solarized"]
-	path = submodules/solarized/solarized
-	url = git://github.com/altercation/solarized.git
-[submodule "submodule/gitignore"]
-	path = submodule/gitignore
-	url = git://github.com/github/gitignore.git
+  path = submodules/solarized/solarized
+  url = git://github.com/altercation/solarized.git
+
+[submodule "submodules/vim/bundle/vim-cucumber"]
+  path = submodules/vim/bundle/vim-cucumber
+  url = git://github.com/tpope/vim-cucumber.git
+[submodule "submodules/vim/bundle/vim-togglemouse"]
+  path = submodules/vim/bundle/vim-togglemouse
+  url = git://github.com/nvie/vim-togglemouse.git
