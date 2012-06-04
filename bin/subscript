@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+# -*- encoding: utf-8 -*-
+
+REFERENCE = '0123456789+-=()aehiklmnoprstuvxβγρφχ',
+SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢₖₗₘₙₒₚᵣₛₜᵤᵥₓᵦᵧᵨᵩᵪ'
+
+ARGF.each_char { |char|
+  print char.tr(REFERENCE, SUBSCRIPT)
+}

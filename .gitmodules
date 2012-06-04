@@ -64,3 +64,6 @@
 [submodule "submodules/vim/bundle/vim-togglemouse"]
   path = submodules/vim/bundle/vim-togglemouse
   url = git://github.com/nvie/vim-togglemouse.git
+[submodule "submodules/vim/bundle/vim-javascript"]
+	path = submodules/vim/bundle/vim-javascript
+	url = git://github.com/pangloss/vim-javascript.git

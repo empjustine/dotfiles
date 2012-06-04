@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+
+time = File.open('/proc/uptime') { |uptime|
+  break uptime.readline.split.first.to_f
+}
+
+miliseconds = time % 1 * 1000
+seconds = time.to_i % 60
+minutes = time.to_i % (60 * 60) / 60
+hours = time.to_i % (60 * 60 * 24) / (60 * 60)
+
+puts "%02d:%02d:%02d %2d" % [hours, minutes, seconds, miliseconds]

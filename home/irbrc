@@ -33,9 +33,5 @@ class Object
   end
 end
 
-AL = 'a'.upto('z').map { |letter| ":#{letter}" }
-AU = 'A'.upto('Z').map { |letter| ":#{letter}" }
-
 require 'pp'
 require 'colored'
-

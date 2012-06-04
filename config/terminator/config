@@ -10,7 +10,7 @@
     audible_bell = True
     background_type = transparent
     scroll_on_output = False
-    font = Inconsolata-dz for Powerline Medium 12
+    font = Liberation Mono 11
     scrollback_infinite = True
 [layouts]
   [[default]]
