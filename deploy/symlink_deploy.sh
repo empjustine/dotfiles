@@ -11,10 +11,6 @@ ln -s ~/.dotfiles/home/irbrc ~/.irbrc
 
 mkdir -p ~/bin
 
-ln -s ~/.dotfiles/submodules/kerl/kerl ~/bin
-ln -s ~/.dotfiles/submodules/ruby-build/bin/rbenv-install ~/bin
-ln -s ~/.dotfiles/submodules/ruby-build/bin/ruby-build ~/bin
-
 ln -s ~/.dotfiles/submodules/vim/ ~/.vim
 
 ln -s ~/.dotfiles/config/geany/ ~/.config/geany
