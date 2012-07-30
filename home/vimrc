@@ -38,7 +38,7 @@ colorscheme solarized
 
 set t_Co=256
 
-let g:Powerline_symbols = 'fancy'
+" let g:Powerline_symbols = 'fancy'
 set laststatus=2
 
 " interface settings ---------------------------------------------------------
