@@ -9,6 +9,7 @@ set output-meta on
 set horizontal-scroll-mode off
 set history-preserve-point on
 set mark-directories on
+
 # Immediately add a trailing slash when autocompleting symlinks to directories
 set mark-symlinked-directories on
 
@@ -22,13 +23,16 @@ set page-completions off
 
 # If there are more than 200 possible completions for a word, ask to show them all
 set completion-query-items 200
+
 # Make Tab autocomplete regardless of filename case
 set completion-ignore-case off
+
 # List all matches in case multiple possible completions are possible
 set show-all-if-ambiguous on
 set show-all-if-unmodified on
 #set completion-prefix-display-length 10
 set print-completions-horizontally off
+
 # Show extra file information when completing, like `ls -F` does
 set visible-stats on
 
