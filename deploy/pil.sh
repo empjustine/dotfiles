@@ -7,7 +7,7 @@ sudo ln -s /usr/lib/i386-linux-gnu/libfreetype.so /usr/lib/
 sudo ln -s /usr/lib/i386-linux-gnu/libjpeg.so /usr/lib/
 sudo ln -s /usr/lib/i386-linux-gnu/libz.so /usr/lib/
 
-mkvirtualenv -p ~/.pythonz/pythons/CPython-2.7.3/bin/python cpython273
+mkvirtualenv -p ~/.pythonz/pythons/CPython-2.7.3/bin/python 2.7.3_tk_pil
 
 cd /usr/include
 sudo ln -s tcl8.4/ tcl
