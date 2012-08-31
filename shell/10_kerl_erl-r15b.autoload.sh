@@ -1,3 +1,7 @@
 #!/bin/sh
 
-[[ -s $HOME/bin/.erl-r15b/activate ]] && source $HOME/bin/.erl-r15b/activate
+if [ -e $HOME/bin/.erl-r15b/activate ]; then
+  source $HOME/bin/.erl-r15b/activate
+else
+  echo "no erl-r15b detected"
+fi

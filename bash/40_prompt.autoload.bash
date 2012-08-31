@@ -5,7 +5,7 @@
 # Sexy Bash Prompt, inspired by "Extravagant Zsh Prompt"
 # A big thanks to \amethyst on Freenode
 
-eval `dircolors -b ~/.dotfiles/submodules/solarized/dircolors-solarized/dircolors.ansi-dark`
+eval `dircolors -b $DOTFILES_PATH/submodules/solarized/dircolors-solarized/dircolors.ansi-dark`
 
 # solarized color theme
 RED=$(tput setaf 1)
@@ -37,4 +37,4 @@ GIT_PS1_SHOWUNTRACKEDFILES=1
 #     <> if there are both,
 #   or = if everything’s synced.
 GIT_PS1_SHOWUPSTREAM=1
-export PS1="\$(history -a)\[$RESET\]\[$CYAN\]\u@\h \[$MAGENTA\]\w\[$RED\]\$(__git_ps1 2> /dev/null)\n\[$WHITE\]\$ \[$RESET\]"
+export PS1="\[$RESET\]\[$CYAN\]\u@\h \[$MAGENTA\]\w\[$RED\]\$(__git_ps1 2> /dev/null)\n\[$WHITE\]\$ \[$RESET\]"

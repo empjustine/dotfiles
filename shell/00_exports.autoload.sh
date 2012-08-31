@@ -2,6 +2,7 @@
 
 # Make vim the default editor
 export EDITOR="vim"
+
 # Don’t clear the screen after quitting a manual page
 export MANPAGER="less -X"
 export TERM=xterm-256color
