@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# The following operation will lose any uncommitted files! You might want to run
+# this in a fresh clone of your repo.
+git symbolic-ref HEAD refs/heads/$1
+rm .git/index
+git clean -fdx
