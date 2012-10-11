@@ -139,8 +139,6 @@ set sidescroll=1
 " inoremap <left> <nop>
 " inoremap <right> <nop>
 
-" magic paste mode (disables intelligent handling of input) ----------------
-
 " Easy window navigation
 map <C-h> <C-w>h
 map <C-j> <C-w>j
@@ -148,4 +146,7 @@ map <C-k> <C-w>k
 map <C-l> <C-w>l
 
 nnoremap ; :
+
+" magic paste mode (disables intelligent handling of input) ----------------
+
 set pastetoggle=<F2>

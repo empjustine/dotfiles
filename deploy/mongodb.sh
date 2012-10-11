@@ -6,4 +6,4 @@ sudo apt-get install libboost-dev libboost-program-options-dev libboost-thread-d
 git clone git://github.com/mongodb/mongo.git ~/repos/mongo
 cd ~/repos/mongo/
 scons all
-scons --prefix=~/bin/.mongo install
+scons --prefix=~/repos/.mongo install
