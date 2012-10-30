@@ -38,13 +38,15 @@ colorscheme solarized
 
 set t_Co=256
 
-" let g:Powerline_symbols = 'fancy'
+let g:Powerline_symbols = 'unicode'
 set laststatus=2
 
 " interface settings ---------------------------------------------------------
 
 " set nowrap
-set colorcolumn=80
+
+" disabled as this generates boring extra spaces while buffer-pasting lines
+" set colorcolumn=80
 
 set ruler
 set history=1000
