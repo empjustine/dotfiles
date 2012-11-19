@@ -1,10 +1,11 @@
 #!/bin/sh
 
-REPOSITORY_ROOT=$HOME/repositories/self/dotfiles
+REPOSITORY_ROOT=$HOME/repositories
+DOTFILES_ROOT=$REPOSITORY_ROOT/self/dotfiles
 
-$REPOSITORY_ROOT/bin/folder-autoload $REPOSITORY_ROOT/shell.d
+$DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/shell.d
 
 if [ "$0" = "bash" ]; then
-	$REPOSITORY_ROOT/bin/folder-autoload $REPOSITORY_ROOT/bash.d
+	$DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/bash.d
 fi
 
