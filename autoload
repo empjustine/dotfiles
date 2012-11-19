@@ -1,0 +1,10 @@
+#!/bin/sh
+
+REPOSITORY_ROOT=$HOME/repositories/self/dotfiles
+
+$REPOSITORY_ROOT/bin/folder-autoload $REPOSITORY_ROOT/shell.d
+
+if [ "$0" = "bash" ]; then
+	$REPOSITORY_ROOT/bin/folder-autoload $REPOSITORY_ROOT/bash.d
+fi
+

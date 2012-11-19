@@ -5,7 +5,7 @@
 # Sexy Bash Prompt, inspired by "Extravagant Zsh Prompt"
 # A big thanks to \amethyst on Freenode
 
-eval `dircolors -b $DOTFILES_PATH/submodules/solarized/dircolors-solarized/dircolors.ansi-dark`
+eval `dircolors -b $HOME/repositories/solarized/dircolors-solarized/dircolors.ansi-dark`
 
 # solarized color theme
 RED=$(tput setaf 1)

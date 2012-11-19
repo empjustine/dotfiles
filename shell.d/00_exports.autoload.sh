@@ -10,7 +10,6 @@ export TERM=xterm-256color
 export EC2_PRIVATE_KEY=~/.ssh/pk-TMLADOPM64S5RL2J33RRDOS732VNYTJM.pem
 export EC2_CERT=~/.ssh/cert-TMLADOPM64S5RL2J33RRDOS732VNYTJM.pem
 
-export DOTFILES_PATH="$HOME/.dotfiles"
-export REPOSITORY_PATH="$HOME/repos"
+export DOTFILES_PATH="$HOME/repositories/self/dotfiles"
 
 export PATH="$DOTFILES_PATH/bin:$PATH"
