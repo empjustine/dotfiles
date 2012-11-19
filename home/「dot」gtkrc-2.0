@@ -1,1 +1,3 @@
-include ".gtkrc-2.0-gnome-color-chooser"
+gtk-xft-antialias=1
+gtk-xft-hinting=1
+gtk-xft-hintstyle="hintfull"

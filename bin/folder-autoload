@@ -1,13 +1,10 @@
 #!/bin/sh
 
 AUTOLOAD_FOLDER=${1}
-if [ ${0} = "bash" ]; then
-	AUTOLOAD_FOLDER=${2}
-fi
 
 if [ -d "${AUTOLOAD_FOLDER}" ]; then
         for f in ${AUTOLOAD_FOLDER}/*; do
-                [ -x "$f" ] && echo ". $f" && . "$f"
+                [ -x "$f" ] && echo ". \"$f\"" && . "$f"
         done
         unset f
 fi

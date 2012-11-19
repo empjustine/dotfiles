@@ -33,8 +33,18 @@ class Object
   end
 end
 
-AL = 'a'.upto('z').map { |letter| ":#{letter}" }
-AU = 'A'.upto('Z').map { |letter| ":#{letter}" }
+def ls
+  %x{ls}.split("\n")
+end
+
+def cd(dir)
+  Dir.chdir(dir)
+  Dir.pwd
+end
+
+def pwd
+  Dir.pwd
+end
 
 require 'pp'
 require 'colored'

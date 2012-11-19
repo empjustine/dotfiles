@@ -20,3 +20,6 @@ vim_glob = Dir["#{vim_bundle_root}/*"]
 vim_directories = vim_glob.select { |f| File.directory?(f) && !File.symlink?(f) }.map { |f| f.gsub("#{vim_bundle_root}/", '') }
 vim_directories.each { |d| puts "ln -s \"#{vim_bundle_root}/#{d}\" \".vim/bundle/#{d.gsub(/「symlink」/, '').gsub(/「dot」/, '.')}\"" }
 
+puts "mkdir \".xmonad\""
+puts "mkdir \".xmonad/lib\""
+puts "ln -s \"#{repositories_root}/solarized/solarized-xmonad/Solarized.hs\" \".xmonad/lib\""

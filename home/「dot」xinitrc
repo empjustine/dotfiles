@@ -12,18 +12,27 @@ fi
 ####
 #update x resources db
 xrdb -merge ~/.Xresources
+xrdc -merge ~/repositories/solarized/solarized/xresources-colors-solarized/Xresources
 
 ####
 #mouse pointer
-xsetroot -cursor_name left_ptr
+xsetroot -cursor_name left_ptr &
 
 ####
 #keymap
-setxkbmap -model abnt2 -layout br -variant abnt2
+setxkbmap -model abnt2 -layout br -variant abnt2 &
 
 ####
 #disable pc speaker beep
-xset -b
+xset -b &
+
+####
+#xmobar
+xmobar &
+
+####
+#wifi-menu
+Terminal -e "sudo wifi-menu"
 
 if [ "$1" == "e16" ]; then
 	exec e16

@@ -7,7 +7,8 @@
   diff = auto
   interactive = auto
   status = auto
-  ui = auto
+# ui = auto
+  ui = always
 
 # Solarized color theme ------------------------------------------------------
 [color "branch"]
@@ -19,6 +20,10 @@
   frag = magenta bold
   old = red bold
   new = green bold
+[color "status"]
+  added = yellow
+  changed = green
+  untracked = cyan
 
 # ----------------------------------------------------------------------------
 
@@ -26,15 +31,18 @@
   # Recognize mixed spaces and tabs as a whitespace problem
   whitespace = space-before-tab
   # System-wide .gitignore file
-  excludesfiles = '~/.gitignore'
-
+  excludesfiles = /home/empjustine/.gitignore
+  editor = vim
 [format]
   pretty = format:%C(blue)%ad%Creset %C(yellow)%h%C(green)%d%Creset %C(blue)%s %C(magenta) [%an]%Creset
 
 [push]
   # 'git push' will push the current branch to its tracking branch
   # the usual default is to push all branches
-	default = current
+  # 'matching' : Push all matching branches (default)
+  # 'tracking' : Push the current branch to whatever it is tracking
+  # 'current'  : Push the current branch
+  default = tracking
 
 [merge]
   summary = true
