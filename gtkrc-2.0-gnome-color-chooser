@@ -1,9 +1,0 @@
-pixmap_path "/home/empjustine/.gnome-color-chooser/images/"
-
-style "gnome-color-chooser-tooltips"
-{
-  bg[NORMAL] = "#FFFFAF"
-  fg[NORMAL] = "#000000"
-}
-widget "gtk-tooltip*" style "gnome-color-chooser-tooltips"
-
