@@ -1,5 +1,6 @@
 #!/bin/sh
 
+sudo pacman -S libxslt
 #sudo apt-get install openssl
 #gem install mongo
 
