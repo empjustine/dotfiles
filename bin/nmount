@@ -9,17 +9,23 @@ E
   exit 1
 fi
 
-UUID=`grep $1 < "$HOME/.nmount" | cut -d '=' -f2`
+UUID=`grep ^$1= < "$HOME/.nmount" | cut -d '=' -f2`
 
   if [ "ç$UUIDç" = "çç" ]; then
     echo "device not in ~/.nmount"
+    ls /media
     exit 1
   else
     pmount /dev/disk/by-uuid/$UUID $1
-    if [ "$?" = "4" ]; then
-      echo "pumounting $1"
+    NMOUNT_PMOUNT_ERRORCODE=$?
+    if [ "$NMOUNT_PMOUNT_ERRORCODE" = "4" ]; then
       pumount $1
+      echo "$UUID @ $1 [DOWN]"
+      ls /media
+    elif [ "$NMOUNT_PMOUNT_ERRORCODE" = "0" ]; then
+      echo "$UUID @ $1 [ UP ]"
     fi
+    unset NMOUNT_PMOUNT_ERRORCODE
   fi
 
 unset UUID

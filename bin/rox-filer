@@ -1,0 +1,3 @@
+#!/bin/sh
+alias python=python2
+0launch http://rox.sourceforge.net/2005/interfaces/ROX-Filer

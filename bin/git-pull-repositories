@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ -d "${REPOSITORY_ROOT}" ]; then
+        for d in ${REPOSITORY_ROOT}/*/*/; do
+                cd $d && echo "$d" && git pull
+        done
+        unset d
+fi
+
