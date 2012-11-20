@@ -2,21 +2,21 @@
 
 ####
 #load xinit common files
-if [ -d /etc/X11/xinit/xinitrc.d ]; then
-	for f in /etc/X11/xinit/xinitrc.d/*; do
-		[ -x "$f" ] && . "$f"
-	done
-	unset f
-fi
+. folder-autoload /etc/X11/xinit/xinitrc.d
 
 ####
-#update x resources db
-xrdb -merge ~/.Xresources
-xrdc -merge ~/repositories/solarized/solarized/xresources-colors-solarized/Xresources
+#update xresources db
+cat $REPOSITORY_ROOT/solarized/solarized/xresources-colors-solarized/Xresources \
+    $DOTFILES_ROOT/Xresources.d/* \
+| xrdb -merge
 
 ####
 #mouse pointer
 xsetroot -cursor_name left_ptr &
+
+####
+#wallpaper
+hsetroot -fill /usr/share/archlinux/wallpaper/archlinux-simplyblack.png
 
 ####
 #keymap
@@ -26,19 +26,5 @@ setxkbmap -model abnt2 -layout br -variant abnt2 &
 #disable pc speaker beep
 xset -b &
 
-####
-#xmobar
-xmobar &
-
-####
-#wifi-menu
-Terminal -e "sudo wifi-menu"
-
-if [ "$1" == "e16" ]; then
-	exec e16
-elif [ "$1" == "xfce"]; then
-	exec xfce4-session
-else
-	exec xmonad
-fi
+exec xmonad
 

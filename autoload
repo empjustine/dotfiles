@@ -4,8 +4,13 @@ export REPOSITORY_ROOT=$HOME/repositories
 export DOTFILES_ROOT=$REPOSITORY_ROOT/self/dotfiles
 
 . $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/sh.d
+. $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/x.d
 
 if [ "$0" = "bash" ]; then
-	. $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/bash.d
+  #bashrc
+  . $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/bash.d
+elif [ "$0" = "-bash" ]; then
+  #bash_profile/login
+  . $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/bash.d
 fi
 
