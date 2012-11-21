@@ -1,20 +1,25 @@
 import XMonad
+import Solarized
+
 import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
 import XMonad.Util.Run(spawnPipe)
-import XMonad.Util.EZConfig(additionalKeys)
 import System.IO
+
+import XMonad.Util.EZConfig(additionalKeys)
 
 main = do
   xmobarProc <- spawnPipe "xmobar .xmobarrc"
   xmonad $ defaultConfig
     { manageHook = manageDocks <+> myManageHook <+> manageHook defaultConfig
-    , layoutHook = avoidStruts  $  layoutHook defaultConfig
+    , layoutHook = avoidStruts  $                   layoutHook defaultConfig
+    , normalBorderColor = solarizedBase01
+    , focusedBorderColor = solarizedRed
+    , modMask = mod4Mask
     , logHook = dynamicLogWithPP xmobarPP
         { ppOutput = hPutStrLn xmobarProc
-        , ppTitle = xmobarColor "green" "" . shorten 50
+        , ppTitle = xmobarColor "green" "" . shorten 80
         }
-    , modMask = mod4Mask
     } `additionalKeys`
         [ ((mod4Mask .|. shiftMask .|. controlMask, xK_Print), spawn "xterm")
         , ((0, xK_Print), spawn "xterm")
