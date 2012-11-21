@@ -5,7 +5,9 @@
 # Sexy Bash Prompt, inspired by "Extravagant Zsh Prompt"
 # A big thanks to \amethyst on Freenode
 
-eval `dircolors -b $HOME/repositories/solarized/dircolors-solarized/dircolors.ansi-dark`
+[ -f "$REPOSITORY_ROOT/solarized/dircolors-solarized/dircolors.ansi-dark" ] && \
+    eval `dircolors -b $REPOSITORY_ROOT/solarized/dircolors-solarized/dircolors.ansi-dark` || \
+    echo "dircolors-solarized not avaliable"
 
 # solarized color theme
 RED=$(tput setaf 1)

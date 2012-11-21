@@ -1,9 +1,13 @@
 #!/bin/bash
 
-source /usr/share/git/completion/git-completion.bash
+[ -f "/usr/share/git/completion/git-completion.bash" ] && \
+    source /usr/share/git/completion/git-completion.bash || \
+    echo "Arch Linux git-completion not avaliable"
 
 source $DOTFILES_ROOT/bash-completion/bundler
 source $DOTFILES_ROOT/bash-completion/rake
 
-source $REPOSITORY_ROOT/bin/kerl/bash_completion/kerl
+[ -f "$REPOSITORY_ROOT/bin/kerl/bash_completion/kerl" ] && \
+    source $REPOSITORY_ROOT/bin/kerl/bash_completion/kerl || \
+    echo "kerl bash autocompletion not avaliable"
 
