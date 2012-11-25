@@ -2,3 +2,8 @@ URxvt.font: xft:Inconsolata:size=10
 URxvt.scrollBar: plain
 URxvt.perl-ext:
 URxvt.perl-ext-common:
+
+URxvt*internalBorder: 0
+URxvt*scrollTtyKeypress: true
+URxvt*scrollWithBuffer: false
+

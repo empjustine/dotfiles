@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+import os.path
+import sys
+
+basepath = sys.argv[1]
+locations = sys.argv[2:]
+
+for location in locations:
+  print(os.path.relpath(basepath, location))

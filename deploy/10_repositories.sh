@@ -15,6 +15,7 @@ git clone git@github.com:basho/rebar.git
 git clone git@github.com:sstephenson/ruby-build.git
 git clone git@github.com:isaacs/nave.git
 git clone git://github.com/ariya/phantomjs.git
+git clone git://github.com/mbrubeck/compleat.git
 
 ##### ##### ##### #####
 cd

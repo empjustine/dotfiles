@@ -21,6 +21,8 @@ WHITE=$(tput setaf 7)
 BOLD=$(tput bold)
 RESET=$(tput sgr0)
 
+. /usr/share/git/git-prompt.sh
+
 # The following properties add visual indicators about the state of the git repo
 # in the current directory to the end of the PS1 prompt; even though these icons
 # can be very informative, they significantly slow down the "calculation" of PS1

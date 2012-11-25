@@ -1,1 +1,1 @@
-../submodules/ruby-build/bin/rbenv-install
+../../../bin/ruby-build/bin/rbenv-install
