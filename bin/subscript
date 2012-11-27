@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+# -*- encoding: utf-8 -*-
+
+LATIN = "0123456789+-=()"
+SUPERSCRIPT = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾"
+SUBSCRIPT = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎"
+
+ARGF.each_char { |character|
+  index = LATIN.index(character)
+  if index
+    print SUBSCRIPT[index]
+  else
+    print character
+  end
+}

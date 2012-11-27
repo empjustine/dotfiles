@@ -12,7 +12,7 @@ import System.IO
 import XMonad.Util.EZConfig(additionalKeys)
 
 main = do
-  xmobarPipe <- spawnPipe "xmobar .xmobarrc"
+  xmobarPipe <- spawnPipe "xmobar $DOTFILES_ROOT/xmobar/top.hs"
   xmonad $ defaultConfig
     { terminal = "uxterm"
     , manageHook = manageDocks <+> myManageHook <+> manageHook defaultConfig

@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+# -*- encoding: utf-8 -*-
+require 'pathname'
+
+def cwd_dotfiles
+
+  return Dir['.*'].select { |f| not(f == '.' || f == '..') }
+end
+
+def orphaned?(file)
+
+  return not(Pathname.new(file).realpath)
+rescue
+
+  return true
+end
+
+def main
+  cwd_dotfiles.each { |f|
+    puts f if orphaned?(f)
+  }
+end
+
+if __FILE__ == $0
+  main
+end

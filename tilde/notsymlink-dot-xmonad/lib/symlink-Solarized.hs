@@ -1,0 +1,1 @@
+/home/empjustine/repositories/solarized/solarized-xmonad/Solarized.hs

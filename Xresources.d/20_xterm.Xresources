@@ -30,5 +30,7 @@
 
 xterm*saveLines: 20000
 
+xterm*visualBell: true
+
 xterm*faceName: Inconsolata
 xterm*faceSize: 10

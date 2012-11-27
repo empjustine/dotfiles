@@ -16,9 +16,6 @@ alias more='less'
 
 alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 
-# IP addresses
-alias myip="dig +short myip.opendns.com @resolver1.opendns.com"
-
 # DWIM
 alias vo,=vim
 alias vom=vim

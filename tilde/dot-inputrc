@@ -10,6 +10,9 @@ set horizontal-scroll-mode off
 set history-preserve-point on
 set mark-directories on
 
+# Avoid audible bell, do visual notification instead
+set prefer-visible-bell
+
 # Immediately add a trailing slash when autocompleting symlinks to directories
 set mark-symlinked-directories on
 
