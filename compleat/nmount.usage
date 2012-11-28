@@ -1,0 +1,4 @@
+nmount [ <label> | <mounted_device> ];
+
+label = ! cut -d '=' -f1 < "$HOME/.nmount";
+mounted_device = ! ls /media;

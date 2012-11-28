@@ -1,4 +1,4 @@
-URxvt.font: xft:Inconsolata:size=10
+URxvt.font: xft:Inconsolata:size=14
 URxvt.scrollBar: plain
 URxvt.perl-ext:
 URxvt.perl-ext-common:

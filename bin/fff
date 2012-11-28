@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'bundler/setup'
+
+require 'fuzzy_file_finder'
+
+GTF_FOLDER = '/tmp/.gtf'
+BASE_SEARCH_FOLDER = '/home/empjustine/repositories/vtx'
+FINDER = FuzzyFileFinder.new([BASE_SEARCH_FOLDER], 100_000)
+
+def find(arg)
+
+  return FINDER.find(arg).sort_by { |m| [-m[:score], m[:path]] }
+end
+
+case $0.rpartition('/').last
+when 'fff'
+  puts find(ARGV.first.dup)[0...20].each { |m| m[:path] }
+when 'vimfff'
+  Dir.mkdir(GTF_FOLDER) rescue
+  Dir["#{GTF_FOLDER}/*"].each { |f|
+    File.delete f
+  }
+  find(ARGV.first.dup)[0...40].each { |m| 
+    File.symlink m[:path], "#{GTF_FOLDER}/#{m[:path][BASE_SEARCH_FOLDER.size + 1..-1].gsub('/', '::')}"
+  }
+  exec "vim #{GTF_FOLDER}"
+else
+  puts "Unknown to self: #{$0}"
+end

@@ -1,8 +1,0 @@
-bundle install [ --vendor <FILE> ];
-bundle COMMAND [ options ];
-
-COMMAND = [ COMMAND_PRIMARY | COMMAND_UTILITIES ];
-COMMAND_PRIMARY = [ install | update | package | exec | config ];
-COMMAND_UTILITIES = [ check | list | show | outdated | console | open | viz | init | gem | platform ];
-
-options = [ --no-color ] [ --verbose ];

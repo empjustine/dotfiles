@@ -1,2 +1,0 @@
-#!/bin/bash
-complete -C $DOTFILES_PATH/bash/completion/rake.rb -o default rake

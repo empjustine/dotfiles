@@ -1,3 +1,4 @@
 source "http://rubygems.org"
 
 gem "colored"
+gem "fuzzy_file_finder", :git => 'git://github.com/jamis/fuzzy_file_finder.git'
