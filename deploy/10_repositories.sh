@@ -36,4 +36,5 @@ cd       repositories/solarized/
 git clone git@github.com:seebi/dircolors-solarized.git
 git clone git://github.com/altercation/solarized.git
 git clone git://github.com/ibotty/solarized-xmonad.git
+git clone git://github.com/solarized/xresources.git
 

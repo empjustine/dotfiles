@@ -55,6 +55,10 @@ set showcmd
 set cmdheight=2
 set showmode
 
+set errorbells
+set visualbell
+set t_vb=
+
 " current line/column settings -----------------------------------------------
 
 set cursorline
@@ -103,8 +107,8 @@ set backspace=indent,eol,start
 " set shiftwidth=4
 " set softtabstop=4
 " set tabstop=4
-" set diffopt=filler
-" set diffopt+=iwhite " ignore whitespace
+set diffopt=filler
+set diffopt+=iwhite " ignore whitespace
 " ----- VTX -----
 
 " whitespace visibility settings ---------------------------------------------

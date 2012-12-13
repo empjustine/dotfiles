@@ -18,15 +18,12 @@ RELATIONS = {
   {dirjoin(REPOSITORIES, 'vim') => '/*'} => dirjoin(USER_HOME, '.vim', 'bundle'),
 }
 
-SYMLINK_PREFIXES = {
-# /#{ATOM_START}example-symlink-decorator-/ => 'replacement',
-  /#{ATOM_START}dot-/ => '.',
-  /#{ATOM_START}vim-/ => 'vim-',
-  /#{ATOM_START}symlink-/ => '',
-}
+PREFIXES = {
+# /#{ATOM_START}example-symlink-decorator-/ => 'replacement',	
 
-NOT_SYMLINK_PREFIXES = {
-  /#{ATOM_START}notsymlink-dot-/ => '.',
+  /#{ATOM_START}symlink-/ => {:replacement => '', :symlink => true,},
+  /#{ATOM_START}dot-/ => {:replacement => '.' },
+  /#{ATOM_START}vim-/ => {:replacement => 'vim-', :symlink => true, },
 }
 
 FUNCTORS = {
@@ -70,16 +67,10 @@ FUNCTORS = {
 
       [:dirname, :basename].each { |name_part|
 
-        SYMLINK_PREFIXES.each { |regexp, substring|
+        PREFIXES.each { |regexp, opts|
 
-          d[:opts][:symlink] = true if target[name_part][regexp]
-          target[name_part].gsub!(regexp, substring)
-        }
-
-        NOT_SYMLINK_PREFIXES.each { |regexp, substring|
-
-          d[:opts][:symlink] = false if target[name_part][regexp]
-          target[name_part].gsub!(regexp, substring)
+          d[:opts][:symlink] = opts[:symlink] if target[regexp] && opts.key?(:symlink)
+          target[name_part].gsub!(regexp, opts[:replacement])
         }
       }
 
@@ -122,6 +113,17 @@ FUNCTORS = {
     },
   lambda { |d| # ---------- ----------
 
+    not(d[:opts][:symlink]) && \
+    d[:pipeline] << 'not_link_sink'
+  } =>
+    lambda { |d| # ---------- ----------
+
+    d[:source] = nil
+
+    d
+  },
+  lambda { |d| # ---------- ----------
+
     d[:opts][:symlink] && \
     d[:pipeline] << 'link_output'
   } =>
@@ -130,6 +132,14 @@ FUNCTORS = {
       target = d[:target]
 
       "ln -s \"#{target[:ln][:source]}\" \"#{target[:ln][:target]}\""
+      #d
+    },
+  lambda { |d| # ---------- ----------
+    d
+  } =>
+    lambda { |d| # ---------- ----------
+
+      d.instance_of?(String) ? d : nil
       #d
     },
 }

@@ -71,6 +71,7 @@
   fontui = -family DINPro -size 9 -weight normal -slant roman -underline 0 -overstrike 0
   fontdiff = -family \"Inconsolata\" -size -12 -weight normal -slant roman -underline 0 -overstrike 0
   commitmsgwidth = 80
+	recentrepo = /home/empjustine/.vim/bundle/vim-pathogen
 
 [alias]
   ush = push

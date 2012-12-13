@@ -1,12 +1,14 @@
 #!/usr/bin/env ruby
 
+Dir.chdir Dir.home
+
 require 'rubygems'
 require 'bundler/setup'
 
 require 'fuzzy_file_finder'
 
 GTF_FOLDER = '/tmp/.gtf'
-BASE_SEARCH_FOLDER = '/home/empjustine/repositories/vtx'
+BASE_SEARCH_FOLDER = '/home/empjustine/repositories'
 FINDER = FuzzyFileFinder.new([BASE_SEARCH_FOLDER], 100_000)
 
 def find(arg)

@@ -28,10 +28,17 @@
                     ~Shift ~Ctrl ~Meta <Btn2Up>:insert-selection(PRIMARY, CUT_BUFFER0) \n\
                      Shift ~Ctrl ~Meta <Btn2Up>:insert-selection(CLIPBOARD, CUT_BUFFER1)
 
-xterm*saveLines: 20000
+! Make selection of URLs and ebuild names behave more naturally
+*charClass: 33:48,35:48,37-38:48,43-47:48,58:48,61:48,63-64:48,95:48,126:48
 
-xterm*visualBell: true
 
-xterm*faceName: Inconsolata
-xterm*faceSize: 12
-xterm*utf8: 1
+! Keep a lot of scrollback and only reset the scroll position on keypresses.
+XTerm*saveLines: 20000
+XTerm*scrollKey: true
+XTerm*scrollTtyOutput: false
+
+XTerm*visualBell: true
+
+! Operate terminals in utf8 mode whether or not uxterm was called
+*XTerm*utf8: 1
+VT100.utf8: 1

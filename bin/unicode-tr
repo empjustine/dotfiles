@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+module UnicodeTranslate
+
+  def self.unicode_tr(source_character_map, target_character_map)
+
+    ARGF.each_char { |character|
+      index = source_character_map.index(character)
+      print(index ? target_character_map[index] : character)
+    }
+  end
+end
+
+if __FILE__ == $0
+
+  source_character_map = ARGV.shift
+  target_character_map = ARGV.shift
+  UnicodeTranslate.unicode_tr(source_character_map, target_character_map)
+end

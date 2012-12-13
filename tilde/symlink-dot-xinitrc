@@ -21,17 +21,18 @@ fi
 
 ####
 #update xresources db
-cat $REPOSITORY_ROOT/solarized/solarized/xresources-colors-solarized/Xresources \
+cat $REPOSITORY_ROOT/solarized/xresources/solarized \
     $DOTFILES_ROOT/Xresources.d/* \
 | xrdb -merge
 
 ####
 #mouse pointer
-xsetroot -cursor_name left_ptr &
+#xsetroot -cursor_name left_ptr &
+unclutter &
 
 ####
 #wallpaper
-hsetroot -fill /usr/share/archlinux/wallpaper/archlinux-simplyblack.png
+#hsetroot -fill /usr/share/archlinux/wallpaper/archlinux-simplyblack.png
 
 ####
 #disable pc speaker beep

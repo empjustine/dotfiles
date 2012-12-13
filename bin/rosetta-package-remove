@@ -1,0 +1,4 @@
+#!/bin/sh
+
+#remove also unused package dependencies
+pacman -Rs $*

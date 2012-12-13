@@ -1,0 +1,3 @@
+#!/bin/sh
+
+pacman --query --info --info $* | awk '/^MODIFIED/ {print $2}'

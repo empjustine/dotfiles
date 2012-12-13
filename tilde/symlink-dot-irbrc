@@ -1,0 +1,48 @@
+# -*- encoding: utf-8 -*-
+# vim:syntax=ruby
+
+require 'irb/completion'
+require 'irb/ext/save-history'
+
+ARGV.concat ["--readline", "--prompt-mode", "simple"]
+IRB.conf[:SAVE_HISTORY] = 10000
+IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb_history"
+
+require 'rubygems'
+require 'bundler/setup'
+
+
+def jpp(json_text)
+  puts JSON.pretty_generate json_text
+end
+
+def xpp(xml_text)
+  xsl =<<XSL
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:output method="xml" encoding="UTF-8" indent="yes"/>
+  <xsl:strip-space elements="*"/>
+  <xsl:template match="/">
+    <xsl:copy-of select="."/>
+  </xsl:template>
+</xsl:stylesheet>
+XSL
+
+  doc  = Nokogiri::XML(xml_text)
+  xslt = Nokogiri::XSLT(xsl)
+  out  = xslt.transform(doc)
+
+  puts out.to_xml
+end
+
+class Object
+  def local_methods
+    (methods - Object.instance_methods).sort
+  end
+end
+
+#nil, false or true
+$VERBOSE = true
+
+$DEBUG = true
+
+require './.irbrc'

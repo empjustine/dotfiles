@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "Local:"
+pacman -Qo $*
+
+echo "Packages:"
+#remote
+pkgfile $*
+if [ "$?" = "1" ]; then
+  echo "$0: $* not found."
+  echo "Regenerate pkgfile database:"
+  echo "  sudo pkgfile --update"
+fi

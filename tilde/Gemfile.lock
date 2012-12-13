@@ -1,0 +1,17 @@
+GIT
+  remote: git://github.com/jamis/fuzzy_file_finder.git
+  revision: f83cbc6d890a72c463e7d8e0f8ea56638c1385ed
+  specs:
+    fuzzy_file_finder (1.0.4)
+
+GEM
+  remote: http://rubygems.org/
+  specs:
+    colored (1.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  colored
+  fuzzy_file_finder!

@@ -1,7 +1,0 @@
-#!/bin/sh
-
-pkgfile $*
-if [ "$?" = "1" ]; then
-  sudo pkgfile --update
-  pkgfile $*
-fi

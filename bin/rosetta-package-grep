@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ "|$*|" == "||" ]; then
+  echo "$0: no parameters"
+  exit 1
+fi
+
+pacman -Qi $*

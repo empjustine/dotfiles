@@ -1,0 +1,4 @@
+useradd -m -g [initial_group] -G [additional_groups] -s [login_shell] [username]
+passwd [username]
+
+userdel -r [username]
