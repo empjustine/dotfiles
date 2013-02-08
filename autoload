@@ -1,16 +1,16 @@
 #!/bin/sh
 
 export REPOSITORY_ROOT=$HOME/repositories
-export DOTFILES_ROOT=$REPOSITORY_ROOT/self/dotfiles
+export DOTFILES_HOME=$REPOSITORY_ROOT/self/dotfiles
 
-. $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/sh.d
-. $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/x.d
+. $DOTFILES_HOME/bin/folder-autoload $DOTFILES_HOME/sh.d
+. $DOTFILES_HOME/bin/folder-autoload $DOTFILES_HOME/x.d
 
 if [ "$0" = "bash" ]; then
   #bashrc
-  . $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/bash.d
+  . $DOTFILES_HOME/bin/folder-autoload $DOTFILES_HOME/bash.d
 elif [ "$0" = "-bash" ]; then
   #bash_profile/login
-  . $DOTFILES_ROOT/bin/folder-autoload $DOTFILES_ROOT/bash.d
+  startx
 fi
 

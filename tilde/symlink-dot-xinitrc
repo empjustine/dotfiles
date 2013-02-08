@@ -22,7 +22,7 @@ fi
 ####
 #update xresources db
 cat $REPOSITORY_ROOT/solarized/xresources/solarized \
-    $DOTFILES_ROOT/Xresources.d/* \
+    $DOTFILES_HOME/Xresources.d/* \
 | xrdb -merge
 
 ####
@@ -41,6 +41,13 @@ xset -b &
 ####
 #set DPI to "redmond" 96
 xrandr --dpi 96
+
+firefox &
+keepassx &
+vlc &
+xterm -e rosetta-network-dhcpcd-start &
+xterm -e rosetta-network-wlan-start &
+xterm &
 
 exec xmonad
 

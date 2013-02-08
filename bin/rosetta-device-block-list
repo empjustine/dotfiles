@@ -1,0 +1,3 @@
+#!/bin/sh
+
+lsblk -o NAME,UUID,SIZE,LABEL

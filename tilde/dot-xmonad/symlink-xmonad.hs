@@ -30,7 +30,7 @@ import XMonad.Prompt(defaultXPConfig)
 import XMonad.Util.EZConfig(additionalKeys)
 
 main = do
-  xmobarPipe <- spawnPipe "xmobar $DOTFILES_ROOT/xmobar/top.hs"
+  xmobarPipe <- spawnPipe "xmobar $DOTFILES_HOME/xmobar/top.hs"
   xmonad $ defaultConfig
     { terminal = myTerminal
     , modMask = myModMask
@@ -125,7 +125,7 @@ main = do
       , appName =? "Download"             --> doFloat -- firefox
       ]
 
-    myLayoutHook = avoidStruts $ smartBorders (tall ||| mirror ||| code ||| dishes ||| full)
+    myLayoutHook = avoidStruts $ smartBorders (code ||| mirror ||| tall ||| dishes ||| full)
       where
         tall        = named "TALL" $ hintedTile Tall
         mirror      = named "WIDE" $ hintedTile Wide

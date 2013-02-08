@@ -2,7 +2,7 @@ bundle install [ --vendor <DIR> ];
 bundle gem [ <gems> ];
 bundle <command> [ <options> ] [ <DIR> ];
 
-command = ! ruby ${DOTFILES_ROOT}/compleat-helpers/bundler-commands.rb;
-gems = ! ruby ${DOTFILES_ROOT}/compleat-helpers/bundler-gems.rb;
+command = ! ruby ${DOTFILES_HOME}/compleat-helpers/bundler-commands.rb;
+gems = ! ruby ${DOTFILES_HOME}/compleat-helpers/bundler-gems.rb;
 
 options = [ --no-color ] [ --verbose ];
