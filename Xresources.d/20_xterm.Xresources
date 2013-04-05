@@ -33,7 +33,7 @@
 
 
 ! Keep a lot of scrollback and only reset the scroll position on keypresses.
-XTerm*saveLines: 20000
+XTerm*saveLines: 16384
 XTerm*scrollKey: true
 XTerm*scrollTtyOutput: false
 
@@ -41,4 +41,9 @@ XTerm*visualBell: true
 
 ! Operate terminals in utf8 mode whether or not uxterm was called
 *XTerm*utf8: 1
-VT100.utf8: 1
+*VT100*utf8: 1
+
+! Use a nice truetype font and size by default
+! xterm*VT100*faceName: DejaVu Sans Mono:style=Book:size=9:antialias=false
+xterm*VT100*faceName: Inconsolata:style=Book:size=11:antialias=true
+

@@ -31,15 +31,15 @@ call togglebg#map("<F11>")
 
 " let g:solarized_termtrans=1
 
-let g:solarized_termcolors=16
+" let g:solarized_termcolors=16
 
-colorscheme solarized
+" colorscheme solarized
 
 " vim-powerline --------------------------------------------------------------
 
 set t_Co=16
 
-let g:Powerline_symbols = 'unicode'
+" let g:Powerline_symbols = 'unicode'
 set laststatus=2
 
 " interface settings ---------------------------------------------------------
@@ -61,7 +61,7 @@ set t_vb=
 
 " current line/column settings -----------------------------------------------
 
-set cursorline
+" set cursorline
 " set cursorcolumn
 
 " search settings ------------------------------------------------------------

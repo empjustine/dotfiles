@@ -1,0 +1,5 @@
+#!/bin/sh
+
+getent passwd "$1" > /dev/null && \
+groups "$1" | grep valkyrjaenv > /dev/null || \
+exit 1

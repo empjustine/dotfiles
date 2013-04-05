@@ -11,6 +11,6 @@ if [ "$0" = "bash" ]; then
   . $DOTFILES_HOME/bin/folder-autoload $DOTFILES_HOME/bash.d
 elif [ "$0" = "-bash" ]; then
   #bash_profile/login
-  startx
+  choice_window_manager
 fi
 

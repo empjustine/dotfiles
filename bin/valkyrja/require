@@ -1,0 +1,18 @@
+#!/bin/sh
+
+_valkyrja_name=$1
+
+if valkyrja-wahr "$_valkyrja_name"; then
+  for f in /home/"${_valkyrja_name}"/environment/override/*; do
+    [ -x "$f" ] && export $f=`cat "$f"`
+  done
+
+  for e in /home/"${_valkyrja_name}"/environment/colon_append/*; do
+    [ -x "$f" ] && export $f=`cat "$f"`:"$f"
+  done
+
+  unset __valkyrja_environment_override
+else
+  echo "${0##*/}: must choose a valkyrja."
+  exit 1
+fi

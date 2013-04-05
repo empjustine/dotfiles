@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+
+def self.system(*a)
+  puts "attempting to run: #{a.join(' ')}"
+end
+
+module Management
+
+  module User
+
+    def self.vacant_id
+
+      800.upto(899) { |i|
+        uid = i.to_s
+        break(uid) if system(
+          'getent',
+          'passwd', uid,
+        )
+      }
+    end
+
+    def self.create(name)
+
+      system(
+        'useradd',
+        '-m',                           #creates user directory
+        '-g', '_valkyrja_environment',  #default group
+        '-s', '/bin/bash',              #shell
+        '-u', self.vacant_id.to_s,
+        name,
+      )
+    end
+  end
+
+  module Group
+
+    def self.create
+
+      return if self.exist
+
+      system(
+        'groupadd',
+        '_valkyrja_environment'
+      )
+    end
+
+    def self.exist
+
+     system(
+       'getent',
+       'group', '_valkyrja_environment'
+     )
+    end
+  end
+end
+

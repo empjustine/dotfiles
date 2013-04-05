@@ -1,0 +1,14 @@
+#!/bin/sh
+
+_valkyrja_name=$1
+
+useradd --system \
+        --key SYS_UID_MIN=801 \
+        --key SYS_UID_MAX=899 \
+        --create-home \
+        --gid 'valkyrjaenv' \
+        --shell '/bin/true' \
+        "$_valkyrja_name" \
+        ${@:2}
+
+valkyrja-prepare "$_valkyrja_name"

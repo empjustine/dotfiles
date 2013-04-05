@@ -1,0 +1,10 @@
+#!/bin/sh
+
+_valkyrja_name=$1
+
+if valkyrja-wahr "$_valkyrja_name"; then
+  su --login "$_valkyrja_name" ${@:2}
+else
+  echo "${0##*/}: must choose a valkyrja."
+  exit 1
+fi

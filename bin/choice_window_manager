@@ -1,0 +1,38 @@
+#!/bin/sh
+
+_X_dialog_tempfile="$HOME/.x_window_manager"
+
+dialog \
+  --title 'Peregrinus Arch Linux Environment' \
+  --menu 'Window Manager' 0 0 0 \
+      'xmonad'   'Xmonad Tiling Window Manager' \
+      'console'  'Drop to console' 2> $_X_dialog_tempfile
+#     'cinnamon' 'Cinnamon Gnome Desktop Environment' \
+#     'gnome'    'Gnome Shell Desktop Environment' \
+
+_X_dialog_retval=$?
+X_WINDOW_MANAGER=`cat $_X_dialog_tempfile`
+
+case $_X_dialog_retval in
+    0)
+        echo "Environment $X_WINDOW_MANAGER"
+        ;;
+    1)
+        echo "Cancel pressed."
+        exit 1
+        ;;
+    255)
+        if test -s $_X_dialog_tempfile ; then
+            echo "Environment $X_WINDOW_MANAGER"
+        else
+            echo "ESC pressed."
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Unknown errorlevel"
+        exit 1
+        ;;
+esac
+
+startx

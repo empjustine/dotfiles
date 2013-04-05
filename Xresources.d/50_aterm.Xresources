@@ -1,6 +1,0 @@
-!maximum lines...
-aterm*saveLines:32767
-
-aterm*transparent:true
-aterm*transpscrollbar:true
-aterm*shading:40

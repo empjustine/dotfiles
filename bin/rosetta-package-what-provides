@@ -1,5 +1,7 @@
 #!/bin/sh
 
+dpkg -S $*
+
 echo "Local:"
 pacman -Qo $*
 

@@ -10,6 +10,9 @@ else
 fi
 
 #archlinux
+export WORKON_HOME=~/.virtualenvs
 if [ -e /usr/bin/virtualenvwrapper.sh ]; then
   source /usr/bin/virtualenvwrapper.sh
+else
+  echo "virtualenvwrapper not deployed"
 fi

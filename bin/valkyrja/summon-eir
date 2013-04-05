@@ -1,0 +1,4 @@
+#!/bin/sh
+
+valkyrja-group-deploy
+valkyrja-create eir -G wheel -u 800
