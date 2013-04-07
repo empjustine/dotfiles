@@ -1,6 +1,0 @@
-Setup.lhs
-	  configure [[--help | --verbose | --builddir | --prefix=<DIR>
-	  --global | --docdir=<DIR> | --enable-optimization |
-	  --disable-optimization] ...] [ --user ]
-	| build
-	| install

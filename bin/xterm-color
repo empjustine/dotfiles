@@ -4,12 +4,13 @@ module XTerm
 
   XTERM_ESCAPE_START = "\033]"
   XTERM_ESCAPE_END   = "\007"
-  SOLARIZED_BACKGROUD = [0x00, 0x2b, 0x36]
+  SOLARIZED_BACKGROUND = [0x00, 0x2b, 0x36] # S_base03
+  SOLARIZED_FOREGROUND = [0x83, 0x94, 0x96] # S_base0
 
   class << self
 
     def escape(*code)
-      puts "#{XTERM_ESCAPE_START}#{[*code].join(";")}#{XTERM_ESCAPE_END}"
+      print "#{XTERM_ESCAPE_START}#{[*code].join(";")}#{XTERM_ESCAPE_END}"
     end
 
     def colour(number, _colour)
@@ -20,29 +21,37 @@ module XTerm
       escape 10, _colour
     end
 
-    def backgroud(_colour)
+    def background(_colour)
       escape 11, _colour
     end
   end
+end
+
+def compress(value, min=0, max=255)
+  if value < min
+    value = min
+  elsif value > max
+    value = max
+  else
+    value
+  end
+end
+
+def rand_colour(base, delta=8)
+  return "##{
+    base.map { |channel_colour|
+      "%02X" % compress(channel_colour - delta + rand(delta * 2 + 1))
+    }.join
+  }"
+
 end
 
 def main
 
   exit 1 unless ENV['TERM'][/xterm/]
 
-  rand_half_range = 8
-  rand_colour = "##{XTerm::SOLARIZED_BACKGROUD.map { |source_colour|
-    colour = source_colour - rand_half_range + rand(rand_half_range * 2 + 1)
-    if colour < 0
-      colour = 0
-    elsif colour > 255
-      colour = 255
-    end
-
-    "%02X" % colour
-  }.join}"
-
-  XTerm.backgroud rand_colour
+  XTerm.background rand_colour XTerm::SOLARIZED_BACKGROUND
+  XTerm.foreground rand_colour XTerm::SOLARIZED_FOREGROUND
 end
 
 if __FILE__ == $0

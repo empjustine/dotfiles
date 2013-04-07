@@ -2,17 +2,13 @@
 
 ####
 #load xinit common files
-. folder-autoload /etc/X11/xinit/xinitrc.d
+. sources /etc/X11/xinit/xinitrc.d/*
 
 ####
 #xmodmap
 if [ -f $HOME/.Xmodmap ]; then
   xmodmap $HOME/.Xmodmap
 fi
-
-####
-#update xresources db
-cat $DOTFILES_HOME/Xresources.d/* | xrdb -merge
 
 ####
 #disable pc speaker beep

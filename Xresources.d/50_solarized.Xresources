@@ -44,8 +44,8 @@
 !
 ! URxvt*background:            S_base03
 
-XTerm*background:               S_base03
-XTerm*foreground:               S_base0
+*VT100*background:              S_base03
+*VT100*foreground:              S_base0
 *VT100*fading:                  40
 *VT100*fadeColor:               S_base03
 *VT100*cursorColor:             S_base1

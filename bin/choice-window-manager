@@ -1,6 +1,10 @@
 #!/bin/sh
 
-_X_dialog_tempfile="$HOME/.x_window_manager"
+if [ "$0" = "bash" ]; then
+  echo "choice_window_manager: not an tty session"
+elif [ "$0" = "-bash" ]; then
+
+_X_dialog_tempfile="/tmp/.$$_x_window_manager"
 
 dialog \
   --title 'Peregrinus Arch Linux Environment' \
@@ -16,23 +20,25 @@ X_WINDOW_MANAGER=`cat $_X_dialog_tempfile`
 case $_X_dialog_retval in
     0)
         echo "Environment $X_WINDOW_MANAGER"
+        startx
         ;;
     1)
         echo "Cancel pressed."
-        exit 1
+        #exit 1
         ;;
     255)
         if test -s $_X_dialog_tempfile ; then
             echo "Environment $X_WINDOW_MANAGER"
+            startx
         else
             echo "ESC pressed."
-            exit 1
+            #exit 1
         fi
         ;;
     *)
         echo "Unknown errorlevel"
-        exit 1
+        #exit 1
         ;;
 esac
 
-startx
+fi # elif [ "$0" = "-bash" ]; then

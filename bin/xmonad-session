@@ -3,9 +3,7 @@
 export DE="xmonad"
 export DESKTOP_SESSION="xmonad"
 
-export BROWSER=firefox
-
-. $DOTFILES_HOME/bin/folder-autoload $DOTFILES_HOME/x.d
+. sources $DOTFILES_ROOT/x.d/*
 
 ####
 #keymap
@@ -14,7 +12,7 @@ numlockx &
 
 ####
 #mouse pointer
-#xsetroot -cursor_name left_ptr &
+xsetroot -cursor_name left_ptr &
 unclutter &
 
 ####
@@ -25,7 +23,6 @@ xset -b &
 #set DPI to "redmond" 96
 xrandr --dpi 96
 
-export GTK2_RC_FILES="$HOME/.gtkrc-2.0"
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
 
 firefox &
@@ -36,6 +33,4 @@ uxterm -e rosetta-network-wlan-start &
 uxterm &
 
 exec xmonad
-
-
 

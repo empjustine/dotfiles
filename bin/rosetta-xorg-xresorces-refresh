@@ -1,0 +1,5 @@
+#!/bin/sh
+
+####
+#update xresources db
+cat $DOTFILES_ROOT/Xresources.d/* | xrdb -merge -cpp /usr/bin/cpp

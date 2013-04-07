@@ -1,0 +1,8 @@
+#!/bin/sh
+
+for _SOURCES_CURRENT_FILE in $@; do
+    [ -x "$_SOURCES_CURRENT_FILE" ] && \
+        echo ". \"$_SOURCES_CURRENT_FILE\"" && \
+        . "$_SOURCES_CURRENT_FILE"
+done
+unset _SOURCES_CURRENT_FILE

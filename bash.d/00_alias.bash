@@ -1,9 +1,5 @@
 #!/bin/bash
 
-alias rm='rm -i'
-alias cp='cp -i'
-alias mv='mv -i'
-
 alias 'cd..'='cd ..'
 alias 'cd....'='cd ../..'
 
