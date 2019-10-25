@@ -1,0 +1,2 @@
+#!/bin/sh
+exec git --git-dir="${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles" --work-tree="${HOME}" "$@"

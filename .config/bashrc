@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Interactive shell:
+#         /etc/bash.bashrc
+#         ~/.bashrc
+#
+for _rc in "${XDG_CONFIG_HOME:-$HOME/.config}/profile.d/"*"sh" ; do
+	test -f "${_rc}" && . "${_rc}"
+done

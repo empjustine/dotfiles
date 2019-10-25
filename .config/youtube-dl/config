@@ -1,0 +1,13 @@
+--ignore-errors
+--playlist-random
+--write-description
+--write-info-json
+--write-annotations
+--write-all-thumbnails
+--all-subs
+--embed-subs
+--embed-thumbnail
+--add-metadata
+--xattrs
+#--max-sleep-interval 5
+#--min-sleep-interval 1

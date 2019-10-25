@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# Login shell:
+#         /etc/profile
+#         ~/.bash_profile
+#         ~/.bash_login
+#         ~/.profile
+#
+for _rc in "${XDG_CONFIG_HOME:-$HOME/.config}/profile.d/"*"sh" ; do
+	test -f "${_rc}" && . "${_rc}"
+done
