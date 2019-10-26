@@ -14,7 +14,7 @@ set maxrefs 20
 set visiblerefs {"master"}
 set hideremotes 0
 set showlocalchanges 1
-set datetimeformat %Y-%m-%dT%H:%M:%S%z
+set datetimeformat {%Y-%m-%dT%H:%M:%S%z}
 set limitdiffs 1
 set uicolor SystemButtonFace
 set want_ttk 0
@@ -51,12 +51,4 @@ set indexcirclecolor #00ff00
 set circlecolors {white blue gray blue blue}
 set linkfgcolor blue
 set circleoutlinecolor SystemWindowText
-set geometry(main) 2359x1380+49+49
-set geometry(state) normal
-set geometry(topwidth) 2357
-set geometry(topheight) 405
-set geometry(pwsash0) "1196 1"
-set geometry(pwsash1) "1984 1"
-set geometry(botwidth) 2341
-set geometry(botheight) 968
 set permviews {}

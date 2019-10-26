@@ -27,6 +27,13 @@
 /PycharmProjects/
 /IdeaProjects/
 
+# IBM VisualAge / Eclipse
+/.dbeaver4/
+/.dveaver-drivers/
+/IBM/IIBT10/
+/IBM/rationalsdp/
+/IBM/WebSphereMQ/
+
 # Visual Studio Code plugins
 /.vscode/
 
