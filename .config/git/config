@@ -5,8 +5,8 @@
 	lowSpeedLimit = 1000
 	lowSpeedTime = 20
 [gui]
-	fontui = -family \"Lucida Console\" -size 8 -weight normal -slant roman -underline 0 -overstrike 0
-	fontdiff = -family \"Lucida Console\" -size 8 -weight normal -slant roman -underline 0 -overstrike 0
+	fontui = -family \"Cascadia Code\" -size 8 -weight normal -slant roman -underline 0 -overstrike 0
+	fontdiff = -family \"Cascadia Code\" -size 8 -weight normal -slant roman -underline 0 -overstrike 0
 	diffcontext = 1
 	encoding = utf-8
 	gcwarning = false
@@ -15,3 +15,6 @@
 	commitencoding = utf-8
 [diff]
 	mnemonicprefix = true
+[user]
+	email = emp.justine@gmail.com
+	name = Emp. Justine

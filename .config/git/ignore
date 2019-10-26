@@ -1,0 +1,63 @@
+# Self
+/.local/share/dotfiles/
+
+# Windows: warning: could not open directory '$folder': Permission denied
+/Application Data/
+/Cookies/
+/Local Settings/
+/My Documents/
+/NetHood/
+/PrintHood/
+/Recent/
+/SendTo/
+/Start Menu/
+/Templates/
+
+# Windows: user registry hive
+/NTUSER.DAT*
+
+# Maven localRepository, takari/maven-wrapper
+/.m2/repository/
+/.m2/wrapper/
+
+# JetBrains IDEs cache
+/.IdeaIC*/
+/.PyCharmCE*/
+/AppData/Local/JetBrains/Toolbox/
+/PycharmProjects/
+/IdeaProjects/
+
+# Visual Studio Code plugins
+/.vscode/
+
+# Windows Store Packages
+/AppData/Local/Packages/
+
+# XDG_CACHE_HOME
+/.cache/
+
+# %LOCALAPPDATA%
+/AppData/LocalLow/
+/AppData/Local/
+
+# %APPDATA%
+/AppData/Roaming/
+
+# Windows CryptoAPI
+/AppData/Roaming/Microsoft/Crypto/
+/.ssh/
+
+# Windows well-known folders
+/Contacts/
+/Desktop/
+/Documents/
+/Downloads/
+/Favorites/
+/Music/
+/Links/
+/OneDrive/
+/Pictures/
+/Saved Games/
+/Searches/
+/Videos/
+/3D Objects/

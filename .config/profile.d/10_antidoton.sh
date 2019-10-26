@@ -1,0 +1,1 @@
+test -f "${XDG_DATA_HOME:-$HOME/.local/share}/antidoton/antidoton.sh" && . "${XDG_DATA_HOME:-$HOME/.local/share}/antidoton/antidoton.sh"
