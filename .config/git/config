@@ -1,0 +1,17 @@
+[http]
+# If the HTTP transfer speed is less than http.lowSpeedLimit for longer than
+# http.lowSpeedTime seconds, the transfer is aborted. Can be overridden by the
+# GIT_HTTP_LOW_SPEED_LIMIT and GIT_HTTP_LOW_SPEED_TIME environment variables.
+	lowSpeedLimit = 1000
+	lowSpeedTime = 20
+[gui]
+	fontui = -family \"Lucida Console\" -size 8 -weight normal -slant roman -underline 0 -overstrike 0
+	fontdiff = -family \"Lucida Console\" -size 8 -weight normal -slant roman -underline 0 -overstrike 0
+	diffcontext = 1
+	encoding = utf-8
+	gcwarning = false
+[i18n]
+	logoutputencoding = utf-8
+	commitencoding = utf-8
+[diff]
+	mnemonicprefix = true
