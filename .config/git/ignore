@@ -15,6 +15,8 @@
 
 # Windows: user registry hive
 /NTUSER.DAT*
+# Windows: user profile
+/ntuser.ini
 
 # Maven localRepository, takari/maven-wrapper
 /.m2/repository/
@@ -26,19 +28,18 @@
 /AppData/Local/JetBrains/Toolbox/
 /PycharmProjects/
 /IdeaProjects/
+/.sonarlint/
 
 # IBM VisualAge / Eclipse
 /.dbeaver4/
-/.dveaver-drivers/
+/.dbeaver-drivers/
 /IBM/IIBT10/
 /IBM/rationalsdp/
 /IBM/WebSphereMQ/
 
 # Visual Studio Code plugins
 /.vscode/
-
-# Windows Store Packages
-/AppData/Local/Packages/
+/.lsp4xml/
 
 # XDG_CACHE_HOME
 /.cache/
@@ -53,6 +54,7 @@
 # Windows CryptoAPI
 /AppData/Roaming/Microsoft/Crypto/
 /.ssh/
+/.rnd
 
 # Windows well-known folders
 /Contacts/
@@ -68,3 +70,5 @@
 /Searches/
 /Videos/
 /3D Objects/
+
+/IntelGraphicsProfiles/
