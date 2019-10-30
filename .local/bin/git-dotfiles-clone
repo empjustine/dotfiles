@@ -1,2 +1,2 @@
 #!/bin/sh
-git clone --bare 'https://github.com/empjustine/dotfiles.git' "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles"
+git clone --bare 'https://github.com/empjustine/dotfiles.git' "${XDG_DATA_HOME:-"${HOME}/.local/share"}/dotfiles"

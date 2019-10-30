@@ -1,0 +1,6 @@
+#!/bin/sh
+WINDOWS_CODE="${HOME}/AppData/Local/Programs/Microsoft VS Code/Code.exe"
+
+if [ -f "${WINDOWS_CODE}" ] ; then
+	exec dotfiles-exec "${WINDOWS_CODE}"
+fi

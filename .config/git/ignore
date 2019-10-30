@@ -55,6 +55,7 @@
 /AppData/Roaming/Microsoft/Crypto/
 /.ssh/
 /.rnd
+/.config/rclone/rclone.conf
 
 # Windows well-known folders
 /Contacts/

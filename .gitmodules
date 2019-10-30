@@ -1,0 +1,6 @@
+[submodule "asdf"]
+	path = .local/share/_asdf
+	url = https://github.com/asdf-vm/asdf.git
+[submodule "antidoton"]
+	path = .local/share/antidoton
+	url = https://github.com/empjustine/antidoton.git
