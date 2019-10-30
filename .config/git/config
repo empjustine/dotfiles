@@ -16,5 +16,7 @@
 [diff]
 	mnemonicprefix = true
 [user]
-	email = emp.justine@gmail.com
+	email = 1224205+empjustine@users.noreply.github.com
 	name = Emp. Justine
+[winUpdater]
+	recentlySeenVersion = 2.23.0.windows.1
