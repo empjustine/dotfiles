@@ -18,9 +18,11 @@
 # Windows: user profile
 /ntuser.ini
 
-# Maven localRepository, takari/maven-wrapper
+# Maven localRepository, takari/maven-wrapper, Gradle cache
 /.m2/repository/
 /.m2/wrapper/
+/.gradle/caches/
+/.gradle/wrapper/dists/
 
 # JetBrains IDEs cache
 /.IdeaIC*/
