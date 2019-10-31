@@ -1,0 +1,2 @@
+#!/bin/sh
+exec git hash-object -t tree /dev/null
