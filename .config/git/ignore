@@ -23,6 +23,9 @@
 /.m2/wrapper/
 /.gradle/caches/
 /.gradle/wrapper/dists/
+/.gradle/daemon/
+/.gradle/native/
+/.tooling/gradle/
 
 # JetBrains IDEs cache
 /.IdeaIC*/
@@ -38,6 +41,8 @@
 /IBM/IIBT10/
 /IBM/rationalsdp/
 /IBM/WebSphereMQ/
+/.ApacheDirectoryStudio/
+/.eclipse/
 
 # Visual Studio Code plugins
 /.vscode/
