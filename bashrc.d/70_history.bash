@@ -2,7 +2,7 @@
 
 # brew install atuin bash-preexec
 if
-	[ "$PS1" ] \
+	[ -n "$PS1" ] \
 		&& [ -x "/home/linuxbrew/.linuxbrew/bin/atuin" ] \
 		&& [ -r "/home/linuxbrew/.linuxbrew/etc/profile.d/bash-preexec.sh" ]
 then

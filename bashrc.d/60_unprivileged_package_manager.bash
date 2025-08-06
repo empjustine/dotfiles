@@ -16,7 +16,7 @@ if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
 fi
 
 if [ -x /home/linuxbrew/.linuxbrew/bin/mise ]; then
-	# /home/linuxbrew/.linuxbrew/bin/mise reshim
+	/home/linuxbrew/.linuxbrew/bin/mise reshim
 	if [ -n "$PS1" ]; then
 		eval "$(/home/linuxbrew/.linuxbrew/bin/mise activate bash)"
 	else

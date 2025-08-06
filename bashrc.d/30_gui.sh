@@ -1,5 +1,13 @@
 #!/bin/sh
 
+if [ -n "$DISPLAY" ]; then
+	systemctl --user import-environment DISPLAY
+fi
+
+if [ -n "$WAYLAND_DISPLAY" ]; then
+	systemctl --user import-environment WAYLAND_DISPLAY
+fi
+
 if [ -n "$WSL_DISTRO_NAME" ]; then
 
 	# normal linux: printenv XDG_RUNTIME_DIR
@@ -21,10 +29,9 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
 		sudo mount --bind / "/mnt/wsl/${WSL_DISTRO_NAME}"
 	fi
 
-	# purge Windows %PATH% from $PATH
+	# ensure /usr/lib/wsl/lib lowest priority in PATH
 	case "$PATH" in
 		*:/usr/lib/wsl/lib:*)
-			PATH_OLD="$(printenv PATH)"
 			PATH="${PATH%%:/usr/lib/wsl/lib:*}:/usr/lib/wsl/lib"
 			;;
 	esac

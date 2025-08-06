@@ -2,7 +2,7 @@
 
 # debug: od -c
 
-if [ "$TERM" = "xterm-256color" ]; then
+if [ -n "$PS1" ] && [ "$TERM" = "xterm-256color" ]; then
 	# ptyxis
 	# vscode xterm.js
 	# idea integrated terminal
