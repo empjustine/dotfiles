@@ -1,13 +1,5 @@
 #!/bin/sh
 
-if [ -n "$DISPLAY" ]; then
-	systemctl --user import-environment DISPLAY
-fi
-
-if [ -n "$WAYLAND_DISPLAY" ]; then
-	systemctl --user import-environment WAYLAND_DISPLAY
-fi
-
 if [ -n "$WSL_DISTRO_NAME" ]; then
 
 	# normal linux: printenv XDG_RUNTIME_DIR

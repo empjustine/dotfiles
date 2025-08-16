@@ -1,11 +1,11 @@
-#!/usr/bin/env zsh
+#!/bin/sh
 
-# debug: od -c
-
-if [ -n "$PS1" ] && [ "$TERM" = "xterm-256color" ]; then
+if [ -n "$PS1" ] && [ -n "$ZSH_VERSION" ] && [ "$TERM" = "xterm-256color" ]; then
 	# ptyxis
 	# vscode xterm.js
 	# idea integrated terminal
+
+	# debug: od -c
 
 	bindkey "^[[1;5C" forward-word
 	bindkey "^[[1;5D" backward-word
