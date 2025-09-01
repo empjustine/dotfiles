@@ -6,6 +6,7 @@ if [ -n "$PS1" ] && [ -n "$ZSH_VERSION" ] && [ "$TERM" = "xterm-256color" ]; the
 	# idea integrated terminal
 
 	# debug: od -c
+	bindkey -e
 
 	bindkey "^[[1;5C" forward-word
 	bindkey "^[[1;5D" backward-word
