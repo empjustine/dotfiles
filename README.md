@@ -18,3 +18,7 @@ printf '. %q\n' "${DOTFILES:-$HOME/dotfiles}/profile.sh" >"${ZDOTDIR:-$HOME}/.mk
 find "${DOTFILES:-$HOME/dotfiles}" -name '*sh' -type f -exec shfmt --write --indent 0 --binary-next-line --case-indent -- '{}' '+'
 find "${DOTFILES:-$HOME/dotfiles}" -name '*sh' -type f -exec shellcheck --check-sourced --external-sources --severity=style --enable=all --exclude=SC2250,SC2292 '{}' '+'
 ```
+
+## credits
+
+this package bundles bash-preexec. Copyright (c) 2017 Ryan Caloras and contributors. Full source code avaliable at https://github.com/rcaloras/bash-preexec , The MIT License.
