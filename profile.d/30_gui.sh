@@ -22,11 +22,16 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
 	fi
 
 	# ensure /usr/lib/wsl/lib lowest priority in PATH
-	case "$PATH" in
-		*:/usr/lib/wsl/lib:*)
-			PATH="${PATH%%:/usr/lib/wsl/lib:*}:/usr/lib/wsl/lib"
-			;;
-		*)
-			;;
-	esac
+	# case "$PATH" in
+	# 	*:/usr/lib/wsl/lib:*)
+	# 		PATH="${PATH%%:/usr/lib/wsl/lib:*}:/usr/lib/wsl/lib"
+	# 		;;
+	# 	*)
+	# 		;;
+	# esac
+fi
+
+if [ -x /usr/bin/gnome-keyring-daemon ] && [ -z "$GNOME_KEYRING_CONTROL" ]; then
+	eval "$(/usr/bin/gnome-keyring-daemon --start --components=secrets 2>/dev/null)"
+	export GNOME_KEYRING_CONTROL
 fi
