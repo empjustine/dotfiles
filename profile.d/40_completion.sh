@@ -5,13 +5,8 @@ if [ -n "$ZSH_VERSION" ]; then
 
 	[ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh || true)"
 
-	if [ -x /home/linuxbrew/.linuxbrew/bin/mise ]; then
-		/home/linuxbrew/.linuxbrew/bin/mise reshim
-		if [ -n "$PS1" ]; then
-			eval "$(/home/linuxbrew/.linuxbrew/bin/mise activate zsh || true)"
-		else
-			eval "$(/home/linuxbrew/.linuxbrew/bin/mise activate --shims || true)"
-		fi
+	if [ -n "$PS1" ] && [ -x /home/linuxbrew/.linuxbrew/bin/mise ]; then
+		eval "$(/home/linuxbrew/.linuxbrew/bin/mise activate zsh || true)"
 	fi
 
 	if [ -n "$PS1" ]; then
@@ -41,12 +36,11 @@ elif [ -n "$BASH_VERSION" ]; then
 		fi
 	fi
 
-	if [ -x /home/linuxbrew/.linuxbrew/bin/mise ]; then
-		/home/linuxbrew/.linuxbrew/bin/mise reshim
-		if [ -n "$PS1" ]; then
-			eval "$(/home/linuxbrew/.linuxbrew/bin/mise activate bash || true)"
-		else
-			eval "$(/home/linuxbrew/.linuxbrew/bin/mise activate --shims || true)"
-		fi
+	if [ -n "$PS1" ] && [ -x /home/linuxbrew/.linuxbrew/bin/mise ]; then
+		eval "$(/home/linuxbrew/.linuxbrew/bin/mise activate bash || true)"
+	fi
+
+	if [ -n "$PS1" ] && [ -x ~/.local/share/mise/shims/fnox ]; then
+		eval "$(~/.local/share/mise/shims/fnox activate bash || true)"
 	fi
 fi

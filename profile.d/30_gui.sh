@@ -26,5 +26,7 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
 		*:/usr/lib/wsl/lib:*)
 			PATH="${PATH%%:/usr/lib/wsl/lib:*}:/usr/lib/wsl/lib"
 			;;
+		*)
+			;;
 	esac
 fi

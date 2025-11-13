@@ -1,4 +1,4 @@
-#1/bin/sh
+#!/bin/sh
 
 if [ -n "$PS1" ] && [ -n "$BASH_VERSION" ]; then
 	PS1='\w\$ '
@@ -14,6 +14,10 @@ if [ -n "$BASH_VERSION" ]; then
 	fi
 fi
 
+if [ -d "${HOME}/.local/share/mise/shims" ]; then
+	PATH="${HOME}/.local/share/mise/shims:${PATH}"
+	# [ -x /home/linuxbrew/.linuxbrew/bin/mise ] && /home/linuxbrew/.linuxbrew/bin/mise reshim
+fi
 if [ -d "${HOME}/.local/bin" ]; then
 	PATH="${HOME}/.local/bin:${PATH}"
 fi
