@@ -9,7 +9,8 @@ fi
 if [ -n "$BASH_VERSION" ]; then
 	if [ -r /etc/bashrc ]; then
 		. /etc/bashrc
-	elif [ -r "${PREFIX}/etc/bash.bashrc" ]; then
+	fi
+	if [ -r "${PREFIX}/etc/bash.bashrc" ]; then
 		. "${PREFIX}/etc/bash.bashrc"
 	fi
 fi
