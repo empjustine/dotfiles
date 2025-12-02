@@ -3,13 +3,10 @@
 ## install
 
 ```sh
-# grep '' ~/.bash* "${ZDOTDIR:-$HOME}/.z"*
-
-printf '. %q\n' "${DOTFILES:-$HOME/dotfiles}/profile.sh" >~/.bash_profile
-printf '. %q\n' "${DOTFILES:-$HOME/dotfiles}/profile.sh" >~/.bashrc
-printf '. %q\n' "${DOTFILES:-$HOME/dotfiles}/profile.sh" >"${ZDOTDIR:-$HOME}/.zprofile"
-printf '. %q\n' "${DOTFILES:-$HOME/dotfiles}/profile.sh" >"${ZDOTDIR:-$HOME}/.zshrc"
-printf '. %q\n' "${DOTFILES:-$HOME/dotfiles}/profile.sh" >"${ZDOTDIR:-$HOME}/.mksh"
+cp "${DOTFILES:-$HOME/dotfiles}/bash_profile.sh" >~/.bash_profile
+cp "${DOTFILES:-$HOME/dotfiles}/bashrc.bash" >~/.bashrc
+cp "${DOTFILES:-$HOME/dotfiles}/zprofile.zsh" "${ZDOTDIR:-$HOME}/.zprofile"
+cp "${DOTFILES:-$HOME/dotfiles}/zshrc.zsh" "${ZDOTDIR:-$HOME}/.zshrc"
 ```
 
 # lint
