@@ -1,13 +1,12 @@
 #!/bin/sh
 
-PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 
 for dir in \
-	"${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims" \
-	"/home/linuxbrew/.linuxbrew/sbin" \
-	"/home/linuxbrew/.linuxbrew/bin" \
 	"${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts" \
 	"/run/media/yoomuin/a95e1c63-2126-4d6c-b682-7dfbc2d1b631/var/home/deck/bin" \
+	"/home/linuxbrew/.linuxbrew/sbin" \
+	"/home/linuxbrew/.linuxbrew/bin" \
 	"${HOME}/.local/bin" \
 	"/usr/lib/wsl/lib"; do
 	[ -d "${dir}" ] && PATH="${PATH}:${dir}"
