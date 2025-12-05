@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/data/data/com.termux/files/usr/bin"
 
 for dir in \
 	"${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts" \
