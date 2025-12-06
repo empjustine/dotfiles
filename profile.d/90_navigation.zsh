@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/zsh
 
 if [ -n "$PS1" ] && [ -n "$ZSH_VERSION" ] && [ "$TERM" = "xterm-256color" ]; then
 	# ptyxis

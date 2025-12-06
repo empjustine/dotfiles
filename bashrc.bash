@@ -1,2 +1,15 @@
 #!/bin/bash
-. "${DOTFILES:-$HOME/dotfiles}/profile.sh"
+for rc in "${DOTFILES:-$HOME/dotfiles}/profile.d/"*; do
+	if [ -r "$rc" ]; then
+		case "$rc" in
+			*.sh)
+				. "$rc"
+				;;
+			*.bash)
+				. "$rc"
+				;;
+			*) ;;
+		esac
+	fi
+done
+unset rc
