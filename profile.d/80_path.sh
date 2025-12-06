@@ -1,17 +1,23 @@
 #!/bin/sh
 
-PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/data/data/com.termux/files/usr/bin"
+if [ "$OCI_CLI_CLOUD_SHELL" = "True" ]; then
+	:
+elif [ "$PREFIX" = "/data/data/com.termux/files/usr" ]; then
+	:
+else
+	PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 
-for dir in \
-	"${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts" \
-	"/run/media/yoomuin/a95e1c63-2126-4d6c-b682-7dfbc2d1b631/var/home/deck/bin" \
-	"/home/linuxbrew/.linuxbrew/sbin" \
-	"/home/linuxbrew/.linuxbrew/bin" \
-	"${HOME}/.local/bin" \
-	"/usr/lib/wsl/lib"; do
-	[ -d "${dir}" ] && PATH="${PATH}:${dir}"
-done
-unset dir
+	for dir in \
+		"${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts" \
+		"/run/media/yoomuin/a95e1c63-2126-4d6c-b682-7dfbc2d1b631/var/home/deck/bin" \
+		"/home/linuxbrew/.linuxbrew/sbin" \
+		"/home/linuxbrew/.linuxbrew/bin" \
+		"${HOME}/.local/bin" \
+		"/usr/lib/wsl/lib"; do
+		[ -d "${dir}" ] && PATH="${PATH}:${dir}"
+	done
+	unset dir
+fi
 
 default_oci="${HOME}/.oci/config.d/ocid1.user.oc1..aaaaaaaaf3sb2fio74htiy5qs367vrcwl5fpxkwlw46r6xuurffdxfhoygba.config"
 if [ -r "${default_oci}" ]; then
@@ -21,7 +27,7 @@ if [ -r "${default_oci}" ]; then
 fi
 unset default_oci
 
-if [ -x ~/.local/share/mise/shims/kubectl ] && [ -d "${HOME}/.kube/config.d" ]; then
+if [ -d "${HOME}/.kube/config.d" ]; then
 	KUBECONFIG="$(find "${HOME}/.kube/config.d" -type f | tr '\n' ':')"
 	export KUBECONFIG
 fi
