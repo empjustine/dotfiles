@@ -7,5 +7,7 @@ if [ -n "$PS1" ] && [ -n "$BASH_VERSION" ]; then
 	elif [ -x "/data/data/com.termux/files/usr/bin/atuin" ]; then
 		eval "$(/data/data/com.termux/files/usr/bin/atuin init bash --disable-up-arrow || true)"
 		. "${DOTFILES:-$HOME/dotfiles}/bash-preexec.sh"
+	elif [ -x "/usr/bin/atuin" ]; then
+		. "${DOTFILES:-$HOME/dotfiles}/bash-preexec.sh"
 	fi
 fi
