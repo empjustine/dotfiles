@@ -13,7 +13,9 @@ else
 		"/home/linuxbrew/.linuxbrew/sbin" \
 		"/home/linuxbrew/.linuxbrew/bin" \
 		"${HOME}/.local/bin" \
-		"/usr/lib/wsl/lib"; do
+		"${HOME}/.dotnet/tools" \
+		"/usr/lib/wsl/lib" \
+		; do
 		[ -d "${dir}" ] && PATH="${PATH}:${dir}"
 	done
 	unset dir
