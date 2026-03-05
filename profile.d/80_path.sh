@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ -d "${HOME}/Android/Sdk" ]; then
+	ANDROID_HOME="${HOME}/Android/Sdk"
+	export ANDROID_HOME
+fi
+
 if [ "$OCI_CLI_CLOUD_SHELL" = "True" ]; then
 	:
 elif [ "$PREFIX" = "/data/data/com.termux/files/usr" ]; then
