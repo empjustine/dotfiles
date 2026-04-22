@@ -6,7 +6,7 @@ if [ -x "/home/linuxbrew/.linuxbrew/bin/mise" ]; then
 	mise exec pnpm@10 -- pnpm config set --location=global minimum-release-age 10080
 fi
 
-if ! grep 'exclude-newer = "7 days"' ~/.config/uv/uv.toml >/dev/null 2>/dev/null; then
-	mkdir -p ~/.config/uv/
-	printf '\nexclude-newer = "7 days"\n' >>~/.config/uv/uv.toml
+if ! grep 'exclude-newer = "7 days"' "${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml" >/dev/null 2>/dev/null; then
+	mkdir -p -- "${XDG_CONFIG_HOME:-$HOME/.config}/uv"
+	printf '\nexclude-newer = "7 days"\n' >>"${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml"
 fi

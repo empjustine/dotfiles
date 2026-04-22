@@ -7,7 +7,8 @@ fi
 
 if [ "$OCI_CLI_CLOUD_SHELL" = "True" ]; then
 	:
-elif [ "$PREFIX" = "/data/data/com.termux/files/usr" ]; then
+elif [ -d "/data/data/com.termux/files/usr" ]; then
+	# termux $PREFIX
 	:
 else
 	PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
@@ -19,8 +20,7 @@ else
 		"/home/linuxbrew/.linuxbrew/bin" \
 		"${HOME}/.local/bin" \
 		"${HOME}/.dotnet/tools" \
-		"/usr/lib/wsl/lib" \
-		; do
+		"/usr/lib/wsl/lib"; do
 		[ -d "${dir}" ] && PATH="${PATH}:${dir}"
 	done
 	unset dir

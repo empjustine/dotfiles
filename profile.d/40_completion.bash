@@ -4,13 +4,18 @@ if [ -n "$BASH_VERSION" ]; then
 	[ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash || true)"
 
 	if [ -n "$PS1" ]; then
-		[ -x /etc/profile.d/bash_completion.sh ] && . /etc/profile.d/bash_completion.sh
+		if [ -x /etc/profile.d/bash_completion.sh ]; then
+			# shellcheck source=/dev/null
+			. /etc/profile.d/bash_completion.sh
+		fi
 
 		if [ -r /home/linuxbrew/.linuxbrew/etc/profile.d/bash_completion.sh ]; then
+			# shellcheck source=/dev/null
 			. /home/linuxbrew/.linuxbrew/etc/profile.d/bash_completion.sh
 		else
 			for bash_completion in /home/linuxbrew/.linuxbrew/etc/bash_completion.d/*; do
 				if [ -r "$bash_completion" ]; then
+					# shellcheck source=/dev/null
 					. "$bash_completion"
 				fi
 			done

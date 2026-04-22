@@ -1,11 +1,23 @@
 #!/bin/bash
 
 if [ -n "$BASH_VERSION" ]; then
-	[ -r /etc/bashrc ] && . /etc/bashrc
-	[ -r "${PREFIX}/etc/bash.bashrc" ] && . "${PREFIX}/etc/bash.bashrc"
-
+	if [ -r /etc/bashrc ]; then
+		# shellcheck source=/dev/null
+		. /etc/bashrc
+	fi
+	# termux $PREFIX = /data/data/com.termux/files/usr
+	if [ -r /data/data/com.termux/files/usr/etc/bash.bashrc ]; then
+		# shellcheck source=/dev/null
+		. /data/data/com.termux/files/usr/etc/bash.bashrc
+	fi
 	# https://docs.cloud.google.com/shell/docs/quotas-limits#bashrc_content
-	[ -f "/google/devshell/bashrc.google" ] && . "/google/devshell/bashrc.google"
+	if [ -r /google/devshell/bashrc.google ]; then
+		# shellcheck source=/dev/null
+		. /google/devshell/bashrc.google
+	fi
 	# https://docs.oracle.com/en-us/iaas/Content/API/Concepts/cloudshellintro.htm#Cloud_Shell_Limitations
-	[ -f "/etc/bashrc.cloudshell" ] && . "/etc/bashrc.cloudshell"
+	if [ -r /etc/bashrc.cloudshell ]; then
+		# shellcheck source=/dev/null
+		. /etc/bashrc.cloudshell
+	fi
 fi

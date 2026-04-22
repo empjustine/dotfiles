@@ -10,7 +10,7 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
 
 	# podman container run
 	# WARN[0000] "/" is not a shared mount, this could cause issues or missing mounts with rootless containers
-	if [ "$(findmnt --noheadings -o PROPAGATION /)" = "private" ]; then
+	if [ "$(findmnt --noheadings -o PROPAGATION / || true)" = "private" ]; then
 		sudo mount --make-shared /
 	fi
 
@@ -22,7 +22,10 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
 	unset wsl2_mountpoint
 
 	if [ -x /usr/bin/gnome-keyring-daemon ] && [ -z "$GNOME_KEYRING_CONTROL" ]; then
-		eval "$(/usr/bin/gnome-keyring-daemon --start --components=secrets 2>/dev/null)"
-		export GNOME_KEYRING_CONTROL
+		gnome_env="$(/usr/bin/gnome-keyring-daemon --start --components=secrets 2>/dev/null)"
+		if [ -n "$gnome_env" ]; then
+			eval "$gnome_env"
+			export GNOME_KEYRING_CONTROL
+		fi
 	fi
 fi
