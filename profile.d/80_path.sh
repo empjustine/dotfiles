@@ -5,10 +5,11 @@ if [ -d "${HOME}/Android/Sdk" ]; then
 	export ANDROID_HOME
 fi
 
-if [ "$OCI_CLI_CLOUD_SHELL" = "True" ]; then
+if [ -r /etc/bashrc.cloudshell ]; then
 	:
-elif [ -d "/data/data/com.termux/files/usr" ]; then
-	# termux $PREFIX
+elif [ -r /google/devshell/bashrc.google ]; then
+	:
+elif [ -d /data/data/com.termux/files/usr ]; then
 	:
 else
 	PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
