@@ -1,26 +1,26 @@
 #!/bin/sh
 
-# @see https://github.com/mprpic/cooldowns
+MISE_MINIMUM_RELEASE_AGE="7d"
+export MISE_MINIMUM_RELEASE_AGE
 
-if [ -x "/home/linuxbrew/.linuxbrew/bin/mise" ]; then
-	mise settings set install_before "7d"
-	# min-release-age days
-	mise exec node@24 -- npm config --global set min-release-age=7 ignore-scripts=true
-	# min-release-age minutes
-	mise exec pnpm@10 -- pnpm config set --location=global minimum-release-age 10080
-fi
+NPM_CONFIG_BEFORE="$(date -u -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ')"
+NPM_CONFIG_FROZEN_LOCKFILE="true"
+NPM_CONFIG_FUND="false"
+NPM_CONFIG_IGNORE_SCRIPTS="true"
+npm_config_min_release_age="7"
+NPM_CONFIG_MIN_RELEASE_AGE="7"
+export NPM_CONFIG_BEFORE NPM_CONFIG_FROZEN_LOCKFILE NPM_CONFIG_FUND NPM_CONFIG_IGNORE_SCRIPTS npm_config_min_release_age NPM_CONFIG_MIN_RELEASE_AGE
 
-UV_EXCLUDE_NEWER="7 days"
+PIP_DISABLE_PIP_VERSION_CHECK=1
 PIP_UPLOADED_PRIOR_TO="$(date -u -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ')"
-export UV_EXCLUDE_NEWER PIP_UPLOADED_PRIOR_TO
+UV_EXCLUDE_NEWER="7 days"
+export PIP_DISABLE_PIP_VERSION_CHECK PIP_UPLOADED_PRIOR_TO UV_EXCLUDE_NEWER
 
-#if ! grep 'exclude-newer = "7 days"' "${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml" >/dev/null 2>/dev/null; then
-#	mkdir -p -- "${XDG_CONFIG_HOME:-$HOME/.config}/uv"
-#	printf '\nexclude-newer = "7 days"\n' >>"${XDG_CONFIG_HOME:-$HOME/.config}/uv/uv.toml"
-#fi
+NPM_CONFIG_MINIMUM_RELEASE_AGE="10080"
+pnpm_config_minimum_release_age="10080"
+PNPM_CONFIG_MINIMUM_RELEASE_AGE="10080"
+export NPM_CONFIG_MINIMUM_RELEASE_AGE pnpm_config_minimum_release_age PNPM_CONFIG_MINIMUM_RELEASE_AGE
 
-# Deno (in project deno.json):
-# { "minimumDependencyAge": "P7D" }
-# deno install --minimum-dependency-age=P3D
-# deno update --minimum-dependency-age=P3D
-# deno outdated --minimum-dependency-age=P3D
+UV_INIT_BARE="1"
+VIRTUAL_ENV_DISABLE_PROMPT=1
+export UV_INIT_BARE VIRTUAL_ENV_DISABLE_PROMPT
