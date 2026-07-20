@@ -28,3 +28,4 @@ merge_history() {
 merge_history ~/.duckdb_history "$DUCKDB_HISTORY"
 merge_history ~/.node_repl_history "$NODE_REPL_HISTORY"
 merge_history ~/.sqlite_history "$SQLITE_HISTORY"
+unset merge_history default target

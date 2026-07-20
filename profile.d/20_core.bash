@@ -20,4 +20,6 @@ if [ -n "$BASH_VERSION" ]; then
 		# shellcheck source=/dev/null
 		. /etc/bashrc.cloudshell
 	fi
+else
+	printf '%s\n' "dotfiles: bash-only snippet sourced under a non-bash shell; skipping" >&2
 fi

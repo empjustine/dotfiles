@@ -12,15 +12,12 @@ elif [ -r /google/devshell/bashrc.google ]; then
 elif [ -d /data/data/com.termux/files/usr ]; then
 	:
 else
-	PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+	PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 
 	for dir in \
-		"${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts" \
 		"/run/media/deck/a95e1c63-2126-4d6c-b682-7dfbc2d1b631/var/home/deck/projects/bin" \
 		"/home/linuxbrew/.linuxbrew/sbin" \
 		"/home/linuxbrew/.linuxbrew/bin" \
-		"${HOME}/.local/bin" \
-		"${HOME}/.dotnet/tools" \
 		"/usr/lib/wsl/lib"; do
 		[ -d "${dir}" ] && PATH="${PATH}:${dir}"
 	done

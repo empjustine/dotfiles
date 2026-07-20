@@ -1,13 +1,62 @@
 #!/bin/bash
 
-if [ -n "$PS1" ] && [ -n "$BASH_VERSION" ]; then
-	if [ -x "/home/linuxbrew/.linuxbrew/bin/atuin" ]; then
-		eval "$(/home/linuxbrew/.linuxbrew/bin/atuin init bash --disable-up-arrow || true)"
-		. "${DOTFILES:-$HOME/dotfiles}/bash-preexec.sh"
-	elif [ -x "/data/data/com.termux/files/usr/bin/atuin" ]; then
-		eval "$(/data/data/com.termux/files/usr/bin/atuin init bash --disable-up-arrow || true)"
-		. "${DOTFILES:-$HOME/dotfiles}/bash-preexec.sh"
-	elif [ -x "/usr/bin/atuin" ]; then
-		. "${DOTFILES:-$HOME/dotfiles}/bash-preexec.sh"
-	fi
+if [ -n "$BASH_VERSION" ]; then
+	case "$-" in
+		*i*)
+			dotfiles="${DOTFILES:-$HOME/dotfiles}"
+
+			# Allowlisted atuin locations, in priority order. An arbitrary
+			# atuin resolved from $PATH is intentionally NOT trusted. Termux
+			# and the system "local" atuin are last (fallback only).
+			atuin_bin=""
+			mise_attempted=""
+			for cand in \
+				"${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims/atuin" \
+				"$HOME/.local/share/mise/shims/atuin" \
+				"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims/atuin" \
+				/usr/local/share/mise/shims/atuin \
+				/home/linuxbrew/.linuxbrew/bin/atuin \
+				/data/data/com.termux/files/usr/bin/atuin \
+				/usr/bin/atuin ; do
+				[ -x "$cand" ] || continue
+				# A mise shim can exist yet have no version selected
+				# (`mise ERROR No version is set for shim: atuin`, exit 1).
+				# Verify the binary actually runs before trusting it.
+				if ! "$cand" --version >/dev/null 2>&1; then
+					case "$cand" in
+						*/mise/shims/atuin)
+							if [ -z "$mise_attempted" ] && command -v mise >/dev/null 2>&1; then
+								mise use -g atuin >/dev/null 2>&1
+								mise_attempted=1
+							fi
+							"$cand" --version >/dev/null 2>&1 || continue
+							;;
+						*)
+							continue
+							;;
+					esac
+				fi
+				atuin_bin="$cand"
+				break
+			done
+			unset cand mise_attempted
+
+			if [ -n "$atuin_bin" ]; then
+				# bash-preexec must load BEFORE atuin init so atuin can wire
+				# into preexec/precmd. Modern atuin falls back to
+				# PROMPT_COMMAND if it's absent, so a missing file is
+				# non-fatal.
+				if [ -r "${dotfiles}/bash-preexec.sh" ]; then
+					# shellcheck source=/dev/null
+					. "${dotfiles}/bash-preexec.sh"
+				fi
+				# shellcheck source=/dev/null
+				eval "$("$atuin_bin" init bash --disable-up-arrow || true)"
+			fi
+
+			unset atuin_bin dotfiles
+			;;
+	esac
+else
+	printf '%s\n' "dotfiles: bash-only snippet sourced under a non-bash shell; skipping" >&2
 fi
