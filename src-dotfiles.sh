@@ -13,6 +13,20 @@
 # For /etc/profile.d deployment the interpreter is dash, so *.sh files must
 # stay POSIX-clean (no [[, no <(...), no `local`, no `source`).
 
+# Idempotency guard. Some platforms re-enter the same rc file from within the
+# startup chain:
+#   * Termux: $PREFIX/etc/profile sources ~/.bashrc itself (interactive bash,
+#     not posix/sh mode), and 20_core.bash sources that same profile again for
+#     non-login shells — without a guard the chain recurses forever.
+#   * bash (login) also reads ~/.bash_profile after /etc/profile, so every
+#     snippet would otherwise run twice at login.
+# DOTFILES_SOURCED is deliberately NOT unset at the end: it must survive
+# across all rc files sourced within one shell process.
+if [ -n "$DOTFILES_SOURCED" ]; then
+	return 0 2>/dev/null || exit 0
+fi
+DOTFILES_SOURCED=1
+
 _src_one() {
 	rc="$1"
 	[ -r "$rc" ] || return 0

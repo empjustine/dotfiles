@@ -26,15 +26,36 @@ if [ -n "$BASH_VERSION" ]; then
 		# Per-tool cascade: mise user shim -> system mise shim -> brew -> system.
 		# `mise` itself uses the shorter brew -> system cascade.
 		_dotfiles_tool() {
-			local _name="$1" _c
+			local _name="$1" _c _cand
 			for _c in \
 				"$HOME/.local/share/mise/shims/$_name" \
 				"${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims/$_name" \
+				"${LOCALAPPDATA:-$HOME/AppData/Local}/mise/shims/$_name.exe" \
 				"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims/$_name" \
 				/usr/local/share/mise/shims/$_name \
 				/home/linuxbrew/.linuxbrew/bin/$_name \
+				"${SCOOP:-$HOME/scoop}/shims/$_name.exe" \
 				/usr/bin/$_name ; do
-				[ -x "$_c" ] && { printf '%s' "$_c"; return 0; }
+				# Win32 (Git Bash/MSYS2): the Windows-only candidates above
+				# (LOCALAPPDATA mise shims, scoop shims) embed the `.exe`
+				# spelling directly — PE shims there have no extensionless
+				# twin, so a plain `-x` probe suffices; POSIX candidates stay
+				# bare.
+				if [ -x "$_c" ]; then
+					_cand="$_c"
+				else
+					continue
+				fi
+				# A mise shim only works while the mise binary itself is
+				# resolvable from $PATH (scoop shims / user dir). If it
+				# isn't, selecting the shim would run a broken binary and
+				# shadow later candidates — skip instead (mirrors the
+				# runtime verification in 70_history, DR-026).
+				case "$_cand" in
+					*/mise/shims/*) command -v mise >/dev/null 2>&1 || continue ;;
+				esac
+				printf '%s' "$_cand"
+				return 0
 			done
 			return 1
 		}
@@ -42,8 +63,13 @@ if [ -n "$BASH_VERSION" ]; then
 			local _c
 			for _c in \
 				/home/linuxbrew/.linuxbrew/bin/mise \
+				"${LOCALAPPDATA:-$HOME/AppData/Local}/mise/bin/mise.exe" \
+				"${SCOOP:-$HOME/scoop}/shims/mise.exe" \
 				/usr/bin/mise ; do
-				[ -x "$_c" ] && { printf '%s' "$_c"; return 0; }
+				if [ -x "$_c" ]; then
+					printf '%s' "$_c"
+					return 0
+				fi
 			done
 			return 1
 		}

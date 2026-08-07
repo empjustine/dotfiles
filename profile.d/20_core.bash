@@ -5,10 +5,16 @@ if [ -n "$BASH_VERSION" ]; then
 		# shellcheck source=/dev/null
 		. /etc/bashrc
 	fi
-	# termux $PREFIX = /data/data/com.termux/files/usr
-	if [ -r /data/data/com.termux/files/usr/etc/bash.bashrc ]; then
+	# msys2 / Git Bash (and Debian/Ubuntu) keep their system bashrc at
+	# /etc/bash.bashrc; Fedora's /etc/bashrc is handled above.
+	if [ -r /etc/bash.bashrc ]; then
 		# shellcheck source=/dev/null
-		. /data/data/com.termux/files/usr/etc/bash.bashrc
+		. /etc/bash.bashrc
+	fi
+	# termux $PREFIX = /data/data/com.termux/files/usr
+	if [ -r /data/data/com.termux/files/usr/etc/profile ]; then
+		# shellcheck source=/dev/null
+		. /data/data/com.termux/files/usr/etc/profile
 	fi
 	# https://docs.cloud.google.com/shell/docs/quotas-limits#bashrc_content
 	if [ -r /google/devshell/bashrc.google ]; then

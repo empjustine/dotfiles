@@ -37,5 +37,6 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
 			eval "$gnome_env"
 			export GNOME_KEYRING_CONTROL
 		fi
+		unset gnome_env
 	fi
 fi
