@@ -13,6 +13,7 @@ export NPM_CONFIG_FUND NPM_CONFIG_IGNORE_SCRIPTS npm_config_min_release_age
 
 PIP_DISABLE_PIP_VERSION_CHECK=1
 PIP_REQUIRE_VIRTUALENV=true
+#PIP_UPLOADED_PRIOR_TO="$(date -u -d '3 days ago' '+%Y-%m-%dT%H:%M:%SZ')"
 UV_EXCLUDE_NEWER="3 days"
 export PIP_DISABLE_PIP_VERSION_CHECK PIP_REQUIRE_VIRTUALENV UV_EXCLUDE_NEWER
 
@@ -22,4 +23,5 @@ pnpm_config_minimum_release_age="4320"
 export pnpm_config_minimum_release_age
 
 UV_INIT_BARE="1"
+# VIRTUAL_ENV_DISABLE_PROMPT=1
 export UV_INIT_BARE

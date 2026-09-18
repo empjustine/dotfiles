@@ -31,3 +31,4 @@ if ($env:OS -eq 'Windows_NT') {
         }
     }
 }
+Remove-Variable -Name la, scoop, cand, kubectl -ErrorAction SilentlyContinue

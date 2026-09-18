@@ -20,7 +20,9 @@ merge_history() {
 	default="$1"
 	target="$2"
 	if [ -r "$default" ] && [ "$default" != "$target" ]; then
-		tee -a -- "$target" <"$default"
+		# >/dev/null: tee mirrors stdin to stdout, which at login would dump
+		# the whole legacy history file into the terminal.
+		tee -a -- "$target" >/dev/null <"$default"
 		rm "$default"
 	fi
 }

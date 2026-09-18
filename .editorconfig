@@ -1,6 +1,17 @@
 root = true
 
-[*]
+# Shell snippets and scripts: tabs, matching shfmt --indent 0 output.
+[*.{sh,bash,zsh}]
 indent_style = tab
 indent_size = 8
 tab_width = 8
+
+# PowerShell snippets: 4 spaces (POSIX tab convention does not apply here).
+[*.ps1]
+indent_style = space
+indent_size = 4
+
+# Node tooling: 2 spaces.
+[*.{mjs,js}]
+indent_style = space
+indent_size = 2

@@ -1,30 +1,31 @@
 #!/bin/sh
-# Unified dotfiles entrypoint — the single source of truth for shell startup.
+# Unified dotfiles entrypoint: loops $DOTFILES/profile.d and sources each
+# snippet (contract documented in docs/system.md).
 #
-# Deploy it (or copy its contents) to the four standard rc files:
-#   ~/.bash_profile  ~/.bashrc  ~/.zprofile  ~/.zshrc
-# It then loops over $DOTFILES/profile.d and sources each snippet:
-#   *.sh   — POSIX, sourced by every shell
-#            (under zsh this is wrapped in `emulate -L ksh` so options stay
-#             local to the helper while the snippet's exports still escape)
-#   *.bash — bash-only
-#   *.zsh  — zsh-only
+# Snippet extensions: *.sh — POSIX, sourced by every shell (under zsh this
+# is wrapped in `emulate -L ksh` so options stay local to the helper while
+# the snippet's exports still escape); *.bash — bash-only; *.zsh — zsh-only.
 #
-# For /etc/profile.d deployment the interpreter is dash, so *.sh files must
-# stay POSIX-clean (no [[, no <(...), no `local`, no `source`).
+# The interpreter may be dash (e.g. /etc/profile.d deployment), so *.sh
+# snippets must stay POSIX-clean (no [[, <(...), no `local`, no `source`).
 
-# Idempotency guard. Some platforms re-enter the same rc file from within the
-# startup chain:
-#   * Termux: $PREFIX/etc/profile sources ~/.bashrc itself (interactive bash,
-#     not posix/sh mode), and 20_core.bash sources that same profile again for
-#     non-login shells — without a guard the chain recurses forever.
-#   * bash (login) also reads ~/.bash_profile after /etc/profile, so every
-#     snippet would otherwise run twice at login.
-# DOTFILES_SOURCED is deliberately NOT unset at the end: it must survive
-# across all rc files sourced within one shell process.
+# Re-entrancy guard (DR-027). Termux's $PREFIX/etc/profile sources ~/.bashrc
+# itself, and 20_core.bash sources that same profile for non-login shells —
+# without this check the chain recurses (bashrc → 20_core → /etc/profile →
+# bashrc → …); bash login also reads ~/.bash_profile after /etc/profile, so
+# snippets would otherwise run twice.
+# DOTFILES_SOURCED is deliberately NOT unset or exported: it must survive
+# across all rc files sourced within one shell process, while child shells
+# (nested bash, ssh, tmux panes) are new processes and must install their
+# own hooks.
+# shellcheck disable=SC2317  # `exit 0` only fires when executed, not sourced
 if [ -n "$DOTFILES_SOURCED" ]; then
 	return 0 2>/dev/null || exit 0
 fi
+
+# Set BEFORE the loop: the loop re-enters this file (20_core sources
+# /etc/profile, which sources ~/.bashrc again on Termux login shells), so
+# the guard must already be up when that inner source arrives.
 DOTFILES_SOURCED=1
 
 _src_one() {
@@ -39,11 +40,15 @@ _src_one() {
 			. "$rc"
 			;;
 		*.bash)
+			# shellcheck disable=SC1090
 			[ -n "$BASH_VERSION" ] && . "$rc"
 			;;
 		*.zsh)
+			# shellcheck disable=SC1090
 			[ -n "$ZSH_VERSION" ] && . "$rc"
 			;;
+		# Unknown extensions are skipped silently, by design.
+		*) : ;;
 	esac
 }
 

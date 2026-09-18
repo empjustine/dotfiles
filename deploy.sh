@@ -20,6 +20,11 @@ if [ -d /data/data/com.termux/files/usr ]; then
 	# covers login + non-login interactive, .bash_profile covers non-interactive
 	# login shells (ssh); the idempotency guard in src-dotfiles.sh makes the
 	# login double-read a no-op.
-	mkdir -p -- ~/.termux/boot ~/.shortcuts/tasks ~/bin
-	chmod 700 -R ~/.termux/boot ~/.shortcuts/tasks ~/bin
+	# Scaffolding only — nothing is populated: Termux:Widget reads
+	# ~/.shortcuts (foreground scripts) and ~/.shortcuts/tasks (background
+	# tasks); dynamic shortcuts are published by dropping scripts into
+	# ~/.termux/widget/dynamic_shortcuts and pressing the app's
+	# CREATE SHORTCUTS button.
+	mkdir -p -- ~/.termux/boot ~/.termux/widget/dynamic_shortcuts ~/.shortcuts/tasks ~/bin
+	chmod 700 -R ~/.termux/boot ~/.termux/widget/dynamic_shortcuts ~/.shortcuts/tasks ~/bin
 fi

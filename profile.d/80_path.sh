@@ -6,7 +6,7 @@ if [ -d "${HOME}/Android/Sdk" ]; then
 fi
 
 case "$(uname -s)" in
-	*MINGW*|*MSYS*|*CYGWIN*)
+	*MINGW* | *MSYS* | *CYGWIN*)
 		# Git Bash / MSYS2 / Cygwin on Win32: PATH is owned by Windows
 		# (System32, per-user dirs, scoop shims). Never reset it here —
 		# native executables would become unreachable. Just make sure
@@ -45,6 +45,11 @@ case "$(uname -s)" in
 		else
 			PATH="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 
+			# Deliberately excluded from the reset (DR-033): the stock
+			# per-user PATH extension points — ~/.local/bin, ~/bin, ~/.bin,
+			# ~/.shortcuts — and installer dirs (.dotnet/tools, JetBrains
+			# Toolbox). The supported extension point is profile.d/ in the
+			# dotfiles repo, not PATH additions.
 			#	"${HOME}/.local/bin" \
 			#	"${HOME}/.dotnet/tools" \
 			#	"${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts" \

@@ -18,12 +18,9 @@ if [ -n "$ZSH_VERSION" ]; then
 				/home/linuxbrew/.linuxbrew/bin/atuin \
 				"${SCOOP:-$HOME/scoop}/shims/atuin.exe" \
 				/data/data/com.termux/files/usr/bin/atuin \
-				/usr/bin/atuin ; do
-				# Win32 (Git Bash/MSYS2): the Windows-only candidates above
-				# (LOCALAPPDATA mise shims, scoop shims) embed the `.exe`
-				# spelling directly — PE shims there have no extensionless
-				# twin, so a plain `-x` probe suffices; POSIX candidates stay
-				# bare.
+				/usr/bin/atuin; do
+				# Windows-only candidates embed `.exe` directly: PE shims have
+				# no extensionless twin, so one `-x` probe suffices (DR-028).
 				[ -x "$cand" ] || continue
 				# A mise shim can exist yet have no version selected
 				# (`mise ERROR No version is set for shim: atuin`, exit 1).

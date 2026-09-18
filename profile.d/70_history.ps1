@@ -30,3 +30,4 @@ if ($env:OS -eq 'Windows_NT') {
         }
     }
 }
+Remove-Variable -Name la, scoop, cand, atuin -ErrorAction SilentlyContinue

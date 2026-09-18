@@ -3,9 +3,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-/**
- * Unescape the four HTML entities we produce when embedding.
- */
 function unescapeHtml(str) {
   // Named entities first, *then* &amp; — otherwise &amp;lt; would become
   // &lt; (via &amp;→&) and then be further unescaped to <.
@@ -23,12 +20,10 @@ function unescapeHtml(str) {
  * where end is the position right after `</tagName>`.
  */
 function extractTag(html, start, tagName) {
-  // Find end of opening tag (the first `>` after start)
   const openEnd = html.indexOf('>', start);
   if (openEnd === -1) return null;
   const contentStart = openEnd + 1;
 
-  // Find closing tag `</tagName>`
   const closeTag = `</${tagName}>`;
   const closeStart = html.indexOf(closeTag, contentStart);
   if (closeStart === -1) return null;
@@ -40,27 +35,20 @@ function extractTag(html, start, tagName) {
   };
 }
 
-/**
- * Parse an embed-files HTML file using simple string scanning (no regex).
- *
- * Each entry: { filename, buffer }
- */
+// String scanning (no regex); entry contract with embed.mjs: { filename, buffer }.
 function parseHtml(html) {
   const entries = [];
   let pos = 0;
 
   while (true) {
-    // Find next <dt>
     const dtStart = html.indexOf('<dt>', pos);
     if (dtStart === -1) break;
 
-    // Extract dt content
     const dtEnd = html.indexOf('</dt>', dtStart + 4);
     if (dtEnd === -1) break;
     const rawFilename = html.slice(dtStart + 4, dtEnd);
     const filename = unescapeHtml(rawFilename.trim());
 
-    // Find next <dd>
     const ddStart = html.indexOf('<dd>', dtEnd + 5);
     if (ddStart === -1) break;
 
@@ -69,7 +57,6 @@ function parseHtml(html) {
     if (ddEnd === -1) break;
     const rawDd = html.slice(ddStart + 4, ddEnd);
 
-    // Determine content type from dd markup
     let buffer = null;
 
     // Case 1: <img src="data:…;base64,…">
@@ -129,7 +116,7 @@ function parseHtml(html) {
       entries.push({ filename, buffer });
     }
 
-    pos = ddEnd + 5; // past </dd>
+    pos = ddEnd + 5;
   }
 
   return entries;
@@ -160,7 +147,6 @@ function main() {
     process.exit(1);
   }
 
-  // Ensure output directory exists
   fs.mkdirSync(outDir, { recursive: true });
 
   for (const entry of entries) {

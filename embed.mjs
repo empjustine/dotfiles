@@ -3,9 +3,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-/**
- * Escape HTML special characters so content can be safely placed in a <pre>.
- */
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')
@@ -14,10 +11,6 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-/**
- * Roughly determine whether a file is "plaintexty".
- * Uses a whitelist of common text extensions + a null-byte sniff for unknown extensions.
- */
 const TEXT_EXTENSIONS = new Set([
   '.txt', '.text', '.md', '.markdown',
   '.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx',
@@ -37,12 +30,10 @@ function isPlaintexty(filePath, buffer) {
   const ext = path.extname(filePath).toLowerCase();
   if (TEXT_EXTENSIONS.has(ext)) return true;
 
-  // For unknown extensions, sniff the first 4 KB for null bytes.
   const sniffLen = Math.min(buffer.length, 4096);
   for (let i = 0; i < sniffLen; i++) {
     if (buffer[i] === 0) return false;
   }
-  // Also check that it decodes as valid UTF-8
   try {
     const decoded = buffer.toString('utf8');
     // Re-encode and compare length to catch multi-byte corruption
@@ -54,7 +45,6 @@ function isPlaintexty(filePath, buffer) {
   }
 }
 
-/** Image file extensions → MIME types for data-URI embedding. */
 const IMAGE_EXTENSIONS = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -69,27 +59,14 @@ const IMAGE_EXTENSIONS = {
 };
 
 function usage() {
-  console.error('Usage: embed-files <output.html> <input1> [input2 ...]');
+  console.error('Usage: embed-files <input1> [input2 ...]');
   process.exit(1);
 }
 
 function main() {
-  const args = process.argv.slice(2);
-  if (args.length < 2) usage();
+  const inputPaths = process.argv.slice(2);
+  if (inputPaths.length < 1) usage();
 
-  const output = args[0];
-  const inputPaths = args.slice(1);
-
-  // Resolve to real paths to prevent output clobbering an input
-  const resolvedOutput = path.resolve(output);
-  for (const input of inputPaths) {
-    if (path.resolve(input) === resolvedOutput) {
-      console.error(`Error: Output file would overwrite input '${input}'`);
-      process.exit(1);
-    }
-  }
-
-  // Read all input files
   const files = inputPaths.map((filePath) => {
     if (!fs.existsSync(filePath)) {
       console.error(`Error: Input file '${filePath}' does not exist`);
@@ -104,7 +81,6 @@ function main() {
     };
   });
 
-  // Build minimal HTML5/XHTML document
   let html = `<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
@@ -144,9 +120,10 @@ function main() {
 
   html += `\n</dl>\n</body>\n</html>\n`;
 
-  fs.writeFileSync(output, html, 'utf8');
-  console.log(`Created: ${output}`);
-  console.log(`Embedded ${files.length} file(s):`);
+  process.stdout.write(html);
+
+  // Progress messages go to stderr so they don't pollute the HTML on stdout.
+  console.error(`Embedded ${files.length} file(s):`);
   for (const file of files) {
     let kind;
     if (file.plaintexty) {
@@ -156,7 +133,7 @@ function main() {
     } else {
       kind = 'base64';
     }
-    console.log(`  - ${file.displayPath}  [${kind}]`);
+    console.error(`  - ${file.displayPath}  [${kind}]`);
   }
 }
 

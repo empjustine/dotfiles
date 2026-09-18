@@ -18,7 +18,8 @@
 if ($global:DOTFILES_SOURCED) { return }
 $global:DOTFILES_SOURCED = $true
 
-# Locate the dotfiles root: $env:DOTFILES wins, else this script's directory.
+# Locate the dotfiles root. $env:DOTFILES wins so a checkout can be shared
+# across hosts; $PSScriptRoot covers the deployed-copy case.
 if ($env:DOTFILES) {
     $dotfiles = $env:DOTFILES
 } else {
@@ -28,9 +29,8 @@ if (-not $dotfiles) {
     $dotfiles = Split-Path -Parent $MyInvocation.MyCommand.Path
 }
 
-# Source profile.d/*.ps1 in sorted order. Snippets are dot-sourced so their
-# functions/aliases persist in the session (same contract as src-dotfiles.sh
-# and its 10_..90_ prefix ordering).
+# Snippets are dot-sourced so their functions/aliases persist in the session
+# (same contract as src-dotfiles.sh and its 10_..90_ prefix ordering).
 $snippets = @(
     Get-ChildItem -LiteralPath (Join-Path $dotfiles 'profile.d') -Filter '*.ps1' -ErrorAction SilentlyContinue |
         Sort-Object Name
@@ -38,3 +38,7 @@ $snippets = @(
 foreach ($snippet in $snippets) {
     . $snippet.FullName
 }
+
+# Scratch variables are not left in the session (same hygiene as the POSIX
+# flow's unset calls, DR-019).
+Remove-Variable -Name dotfiles, snippets, snippet -ErrorAction SilentlyContinue
