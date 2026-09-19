@@ -129,10 +129,6 @@ only from an explicit, ordered allowlist of install locations; an arbitrary
   platform for a branch that only fires on Win32. PE shims have no
   extensionless twin, so embedding the spelling in the Windows-only
   candidates is equivalent and cheaper.
-- **Why `bash-preexec.sh` is still vendored:** atuin ≥ 18.18.x bundles its
-  own bash-preexec and auto-loads it when none is present, so the vendored
-  copy is redundant there — but it is kept as the fallback for older atuin
-  (DR-010, DR-025). When the atuin floor moves to ≥ 18.18.x, delete it.
 
 ## 6. PATH policy: three regimes
 
@@ -227,7 +223,7 @@ guard/root-resolution/loop contract (DR-030, DR-031, DR-032).
 - The stock per-user PATH dirs are never re-added by the reset (DR-033).
 - `deploy.sh` only ever copies `src-dotfiles.sh` (plus zsh targets) and the
   `shortcuts/tasks/*.sh` background tasks (Termux-only; DR-036); it does
-  not copy `profile.d/` or `bash-preexec.sh` — extending it would risk
+  not copy `profile.d/` — extending it would risk
   stale copies on previously-provisioned hosts (DR-016).
 - Snippet scratch variables are unset/removed on scope exit (DR-019,
   DR-034 — including the PowerShell flow).
@@ -243,7 +239,5 @@ guard/root-resolution/loop contract (DR-030, DR-031, DR-032).
   DR-008.
 - `50_ip.sh` writes to a synced Android folder — accepted, alternative
   location in DR-009.
-- `bash-preexec.sh` vendoring is obsolete for atuin ≥ 18.18.x — delete when
-  the floor moves (DR-010, DR-025).
 - `PYTHON_HISTORY` wiring is ready but inert until Python ≥ 3.13 is
   standard (`70_history.sh`).

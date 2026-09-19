@@ -40,7 +40,6 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | `shortcuts/tasks/ip.sh` | Termux:Widget background task — refresh `ip.json` for Markor and toast the primary IPv4 (DR-009, DR-036); copied to `~/.shortcuts/tasks/ip.sh` by `deploy.sh` |
 | `deploy.sh` | copies `src-dotfiles.sh` onto the rc targets (zsh targets only when zsh exists); Termux:Widget dir scaffolding + `shortcuts/tasks/*.sh` background tasks (DR-036) |
 | `lint.sh` | `shfmt` + `shellcheck` over `*.sh`/`*.bash`, `zsh -n` over `*.zsh`; truncates `report.txt` per run, exits non-zero on findings |
-| `bash-preexec.sh` | vendored rcaloras bash-preexec (MIT); fallback for atuin < 18.18.x (DR-010, DR-025) |
 | `embed.mjs` / `unembed.mjs` | embed files into a self-contained HTML page / extract them back |
 | `termux-file-editor`, `termux-url-opener` | Termux hook scripts |
 
@@ -120,9 +119,11 @@ Per-environment behavior:
   allowlist — mise shims (XDG/user/system/`%LOCALAPPDATA%`), brew,
   scoop (`.exe`), Termux, `/usr/bin` — validated with `--version`, with a
   one-shot `mise use -g atuin` auto-provision for versionless mise shims
-  (DR-016, DR-023, DR-026, DR-028). bash additionally sources the vendored
-  `bash-preexec.sh` before `atuin init` (fallback for atuin < 18.18.x,
-  DR-025). Invoked as `atuin init <shell> --disable-up-arrow`.
+  (DR-016, DR-023, DR-026, DR-028). atuin ≥ 18.18.x bundles its own
+  bash-preexec (V0.7.0) and auto-loads it at init time when no other
+  preexec backend (ble.sh, external bash-preexec) is present — the
+  dotfiles source nothing, so the bundled copy is the only backend
+  (DR-025, DR-037). Invoked as `atuin init <shell> --disable-up-arrow`.
 - **Completions** (`40_completion.*`): bash-completion framework + brew
   shellenv (the framework file is probed with `-r` — distros install it
   non-executable); per-tool cascade mise user shim → system mise shim →
@@ -186,6 +187,7 @@ Per-environment behavior:
 
 ## 8. Credits
 
-This package bundles bash-preexec. Copyright (c) 2017 Ryan Caloras and
-contributors. Full source code available at
-<https://github.com/rcaloras/bash-preexec>, The MIT License.
+*This section is intentionally empty — the last bundled third-party
+component (rcaloras' bash-preexec, MIT) was removed with the atuin ≥
+18.18 floor (DR-037); see the git history and DR-010/DR-025 for its
+time in the tree.*

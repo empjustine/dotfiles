@@ -180,7 +180,7 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   **accepted** as low-risk. If it ever matters, writing to `$XDG_STATE_HOME`
   instead keeps the data off any synced/shareable location.
 
-## DR-010 | Vendoring `bash-preexec.sh` (third-party, MIT) | Resolved (superseded — see DR-025) | 2025-04-22
+## DR-010 | Vendoring `bash-preexec.sh` (third-party, MIT) | Resolved (deleted — see DR-025, DR-037) | 2025-04-22
 
 - **Context:** Need zsh-like `preexec`/`precmd` hooks in bash for atuin.
 - **Decision:** The upstream `bash-preexec` (rcaloras, MIT) is vendored
@@ -506,7 +506,7 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
 - **Consequences:** One set of XDG defaults across platforms, so behavior is
   predictable and diff-free vs. POSIX. Cost: msys programs that genuinely read
   `XDG_*` (rare — most use `LOCALAPPDATA`) will not find Windows-style paths;
-## DR-025 | bash-preexec: superseded by atuin's bundled copy (≥ 18.18.x) | Accepted (applied) | 2026-07
+## DR-025 | bash-preexec: superseded by atuin's bundled copy (≥ 18.18.x) | Resolved (deleted — see DR-037) | 2026-07
 
 - **Context:** DR-010 vendored rcaloras' `bash-preexec.sh` (374 lines) at the
   repo root, sourced by `70_history.bash` before `atuin init`, because atuin's
@@ -844,3 +844,29 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   "nothing is populated" doc claims and the DR-016 invariant wording were
   updated accordingly. `deploy.sh` remains idempotent (cp over identical
   content is a no-op); non-Termux hosts still skip the branch entirely.
+
+## DR-037 | Drop vendored `bash-preexec.sh` (atuin ≥ 18.18 floor) | Accepted (applied) | 2026-09-19
+
+- **Context:** The repo vendored rcaloras' `bash-preexec.sh` (V0.6.0, MIT) at
+  the root as the preexec backend for `70_history.bash`, with DR-025 keeping it
+  as a fallback for atuin < 18.18.x. Termux — the oldest environment in scope —
+  ships atuin 18.19.0; everywhere else atuin is ≥ 18.18.x by construction. Two
+  problems surfaced:
+  1. The vendored V0.6.0 is functionally an old snapshot; atuin ≥ 18.18 bundles
+     its own V0.7.0 bash-preexec (compiled in, `BASH.preexec`) and auto-loads
+     it **only when no other preexec backend is present**. Sourcing the vendored
+     copy first set `bash_preexec_imported`, so atuin skipped its newer,
+     history-reliable builtin — leaving Termux on the old, fragile path.
+  2. The file was third-party foreign code (DR-010) now redundant everywhere in
+     scope.
+- **Decision:** Delete `bash-preexec.sh` and the sourcing block in
+  `70_history.bash`. With no external backend loaded, atuin ≥ 18.18 auto-loads
+  its bundled V0.7.0 at `atuin init` time — the only, correct backend. DR-010
+  flips to "Resolved (deleted)", DR-025 to "Resolved (deleted — see DR-037)".
+- **Consequences:** One fewer vendored dependency; history capture on Termux
+  (and everywhere) now uses atuin's bundled, history-reliable bash-preexec
+  V0.7.0 instead of a stale external copy. The 18.18 floor is now a hard
+  requirement for the atuin path (already true in every supported environment);
+  anyone on an older atuin gets `atuin init bash`'s legacy fallback (or should
+  upgrade). Docs (§7 SRD atuin wiring, §5 TDD tool-discovery, README credits,
+  REQ-2/REQ-7 scope) were updated to remove the vendored-file mentions.

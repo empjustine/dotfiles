@@ -25,4 +25,6 @@ find "${DOTFILES:-$HOME/dotfiles}" -name '*sh' -type f -exec shellcheck --check-
 
 ## credits
 
-this package bundles bash-preexec. Copyright (c) 2017 Ryan Caloras and contributors. Full source code avaliable at https://github.com/rcaloras/bash-preexec , The MIT License.
+*None currently bundled — the last third-party component (rcaloras'
+bash-preexec, MIT) was removed with the atuin ≥ 18.18 floor (DR-037);
+see DR-010/DR-025 for its history.*

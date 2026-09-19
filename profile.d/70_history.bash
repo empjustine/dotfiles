@@ -10,8 +10,6 @@ case "$-" in
 	*) return 0 ;;
 esac
 
-dotfiles="${DOTFILES:-$HOME/dotfiles}"
-
 # Allowlisted atuin locations, in priority order. An arbitrary
 # atuin resolved from $PATH is intentionally NOT trusted. Termux
 # and the system "local" atuin are last (fallback only).
@@ -53,17 +51,15 @@ done
 unset cand mise_attempted
 
 if [ -n "$atuin_bin" ]; then
-	# bash-preexec must load BEFORE atuin init so atuin can wire
-	# into preexec/precmd. Since atuin 18.18.x the binary bundles
-	# bash-preexec itself and auto-loads it when none is present
-	# (DR-025), so this vendored copy is only needed for older
-	# atuin and a missing file is non-fatal.
-	if [ -r "${dotfiles}/bash-preexec.sh" ]; then
-		# shellcheck source=/dev/null
-		. "${dotfiles}/bash-preexec.sh"
-	fi
+	# atuin ≥ 18.18.x bundles bash-preexec (V0.7.0) itself and
+	# auto-loads it at `atuin init` time when no other preexec
+	# backend (ble.sh, external bash-preexec) is present; loading an
+	# external copy first would set bash_preexec_imported and make
+	# atuin skip its newer, history-reliable builtin (DR-025,
+	# DR-037). The vendored bash-preexec.sh is therefore no longer
+	# sourced — atuin's bundled one is the only preexec backend.
 	# shellcheck source=/dev/null
 	eval "$("$atuin_bin" init bash --disable-up-arrow || true)"
 fi
 
-unset atuin_bin dotfiles
+unset atuin_bin
