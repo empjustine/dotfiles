@@ -95,11 +95,8 @@ uv_bin="$(_dotfiles_tool uv)"
 uvx_bin="$(_dotfiles_tool uvx)"
 [ -n "$uvx_bin" ] && eval "$($uvx_bin --generate-shell-completion bash || true)"
 
-fnox_bin="$(_dotfiles_tool fnox)"
-[ -n "$fnox_bin" ] && eval "$($fnox_bin activate bash || true)"
-
 kubectl_bin="$(_dotfiles_tool kubectl)"
 # shellcheck disable=SC1090
 [ -n "$kubectl_bin" ] && source <($kubectl_bin completion bash || true)
 
-unset mise_bin uv_bin uvx_bin fnox_bin kubectl_bin _dotfiles_tool _dotfiles_mise
+unset mise_bin uv_bin uvx_bin kubectl_bin _dotfiles_tool _dotfiles_mise

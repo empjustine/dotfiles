@@ -124,7 +124,7 @@ default tooling path and default sourcing and add nothing on top.
   `profile.d/` numbered snippets; users never edit generated rc files
   (DR-001, DR-033).
 - **REQ-2 Tool wiring.** atuin history hooks, tab completion (kubectl,
-  mise, uv/uvx, fnox, brew, bash-completion framework) and dynamic
+  mise, uv/uvx, brew, bash-completion framework) and dynamic
   KUBECONFIG are set up automatically where the tools exist in trusted
   locations.
 - **REQ-3 REPL/history hygiene.** REPL history for duckdb/node/sqlite is

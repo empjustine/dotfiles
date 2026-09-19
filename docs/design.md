@@ -94,7 +94,7 @@ re-entry (DR-027).
 
 ## 5. Tool discovery: ordered allowlist cascades
 
-**Decision:** external tools (atuin, kubectl, mise, uv, fnox) are resolved
+**Decision:** external tools (atuin, kubectl, mise, uv) are resolved
 only from an explicit, ordered allowlist of install locations; an arbitrary
 `command -v <tool>` from `$PATH` is intentionally never trusted (DR-016).
 

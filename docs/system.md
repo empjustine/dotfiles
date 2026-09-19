@@ -29,7 +29,7 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | `src-dotfiles.ps1` | PowerShell analog of the entrypoint (5.1 & 7.x); sources only `*.ps1` snippets (DR-030) |
 | `profile.d/10_wsl2.sh` | WSL2 plumbing: `XDG_RUNTIME_DIR` normalization, throttled `fstrim /`, shared-root propagation, cross-distro bind mount, gnome-keyring (DR-007) |
 | `profile.d/20_core.bash` | sources the distro/cloud/system bashrc (`/etc/bashrc`, `/etc/bash.bashrc`, Termux profile, Google/Oracle cloud bashrc) (DR-020, DR-022.3) |
-| `profile.d/40_completion.{bash,zsh,ps1}` | tab completion: bash-completion framework, brew shellenv, mise activate, uv/uvx, fnox, kubectl (DR-021, DR-031) |
+| `profile.d/40_completion.{bash,zsh,ps1}` | tab completion: bash-completion framework, brew shellenv, mise activate, uv/uvx, kubectl (DR-021, DR-031) |
 | `profile.d/50_ip.sh` | writes `ip --json addr` to the Markor Documents folder (Termux only, interactive-only; DR-009) |
 | `profile.d/60_containers.{sh,ps1}` | dynamic `KUBECONFIG` from `~/.kube/config.d` (`;` on Win32, `:` elsewhere; DR-032) |
 | `profile.d/70_history.{bash,zsh,sh,ps1}` | atuin hooks (allowlisted discovery, DR-016); REPL history relocation + legacy merge (`70_history.sh`) |
@@ -127,7 +127,7 @@ Per-environment behavior:
   shellenv (the framework file is probed with `-r` — distros install it
   non-executable); per-tool cascade mise user shim → system mise shim →
   brew → system (`mise` itself: standalone POSIX installs → brew → system);
-  `mise activate`, uv/uvx shell completion, fnox activate (bash),
+  `mise activate`, uv/uvx shell completion,
   `kubectl completion <shell>` via process substitution (bash/zsh) or
   `Out-String | Invoke-Expression` (PowerShell) (DR-021, DR-031, DR-034).
 - **KUBECONFIG** (`60_containers.*`): if `~/.kube/config.d` exists *and

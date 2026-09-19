@@ -386,7 +386,7 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
 ## DR-021 | Programmable completion setup in `40_completion.{bash,zsh}` | Accepted | 2026-07
 
 - **Context:** Interactive shells want tab-completion for the CLI tools in use
-  (kubectl, mise, uv/uvx, fnox, brew). Each tool ships its own completion
+  (kubectl, mise, uv/uvx, brew). Each tool ships its own completion
   script, but since the dotfiles own the rc flow these must be wired up
   explicitly. (atuin's advanced command-history management is the related
   facility but lives in `70_history.{bash,zsh}` — see DR-016.)
@@ -401,8 +401,8 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   - the bash-completion framework (`/etc/profile.d/bash_completion.sh` and
     linuxbrew's `bash_completion.sh`, else sourcing linuxbrew's
     `bash_completion.d/*`).
-  - `mise activate bash/zsh`, `uv`/`uvx` shell-completion (bash/zsh), and
-    `fnox activate bash` (bash only) via the discovered binaries.
+  - `mise activate bash/zsh`, `uv`/`uvx` shell-completion (bash/zsh) via
+    the discovered binaries.
   - kubectl completion via `source <(kubectl completion bash/zsh)` (process
     substitution — the reason this file is shell-specific, DR-002).
 - **Consequences:** Tab-completion works for those tools in interactive bash and
