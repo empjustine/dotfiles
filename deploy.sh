@@ -76,7 +76,18 @@ if [ -d ~/storage/shared/Documents/markor ]; then
 	ip --json addr >~/storage/shared/Documents/markor/ip.json
 fi
 
-termux-toast "ip.json updated"
+# Toast a usable response: the primary IPv4 (the first inet address on
+# the first interface), which the JSON's full dump is not. jq is
+# preferred; fall back to awk when missing.
+ip4=$(ip --json addr show dev wlan0 2>/dev/null | jq -r '.[0].addr_info[] | select(.family == "inet") | .local' 2>/dev/null | head -1)
+if [ -z "$ip4" ]; then
+	ip4=$(ip -4 addr show dev wlan0 2>/dev/null | awk '/inet /{print $2; exit}' | cut -d/ -f1)
+fi
+if [ -n "$ip4" ]; then
+	termux-toast "wlan0: $ip4"
+else
+	termux-toast "ip.json updated"
+fi
 __TERMUX_IP__
 	chmod 700 ~/.shortcuts/tasks/sshd.sh ~/.shortcuts/tasks/ip.sh
 fi
