@@ -1,6 +1,7 @@
 #!/bin/sh
 
-MISE_MINIMUM_RELEASE_AGE="3d"
+# @see https://mise.jdx.dev/configuration/settings.html#minimum_release_age
+MISE_MINIMUM_RELEASE_AGE="24h"
 export MISE_MINIMUM_RELEASE_AGE
 
 #NPM_CONFIG_BEFORE="$(date -u -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ')"
