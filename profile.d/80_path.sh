@@ -54,6 +54,7 @@ case "$(uname -s)" in
 			#	"${HOME}/.dotnet/tools" \
 			#	"${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts" \
 			for dir in \
+				"${HOME}/.pi/agent/bin" \
 				"/run/media/deck/a95e1c63-2126-4d6c-b682-7dfbc2d1b631/var/home/deck/projects/bin" \
 				"/home/linuxbrew/.linuxbrew/sbin" \
 				"/home/linuxbrew/.linuxbrew/bin" \
