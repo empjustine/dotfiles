@@ -110,8 +110,20 @@ if command -v df_due >/dev/null 2>&1; then
 fi
 [ -d "$_df_cache" ] || mkdir -p -- "$_df_cache"
 
+# `mise activate` is the one eager generator left (DR-041 kept it: it is a hook,
+# not a completion). Profiled 2026-11-18 (DR-045): ~27 ms net in bash, of which
+# ~5 ms is the spawn, ~5 ms the 201-line blob and ~16 ms an inline
+# `mise hook-env` — the same call the prompt makes before every command. With
+# DOTFILES_MISE_SHIMS=1 the blob is a single PATH export (~7 ms) and the
+# per-prompt hook disappears, at the cost of per-directory tool switching.
 mise_bin="$(_dotfiles_mise)"
-[ -n "$mise_bin" ] && eval "$($mise_bin activate bash || true)"
+if [ -n "$mise_bin" ]; then
+	if [ "${DOTFILES_MISE_SHIMS:-0}" = 1 ]; then
+		eval "$($mise_bin activate bash --shims || true)"
+	else
+		eval "$($mise_bin activate bash || true)"
+	fi
+fi
 
 # Refresh policy: the run-guard (every N startups or X seconds), a missing blob,
 # or a tool binary newer than its blob. A skipped refresh costs two -e/-nt

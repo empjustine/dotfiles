@@ -200,10 +200,29 @@ A skipped refresh costs two `-e`/`-nt` builtins per tool.
 | bash interactive | 106–114 ms | **51 ms** | 108 ms |
 | zsh interactive | 196 ms | **83 ms** | 148 ms (first ever run: ~0.95 s — compdump) |
 
-**What stays eager:** `mise activate <shell>` (29 ms bash / 34 ms zsh — a
-PROMPT_COMMAND/chpwd hook, not a completion), the bash-completion framework
-(5 ms), `compinit` (25 ms) and `brew shellenv` (PATH; belongs in `80_path.sh`
-per the deferred (c) item). Deferring those changes behaviour, not just speed.
+**What stays eager:** `mise activate <shell>`, `atuin init <shell>`, the
+bash-completion framework (5 ms), `compinit` (25 ms) and `brew shellenv` (PATH).
+Deferring those changes behaviour, not just speed. Profile (DR-045; bash, net of
+the 3–4 ms shell):
+
+| eager piece | cost | of which |
+|---|---|---|
+| `mise activate bash` | ~27 ms | 5 ms spawn + 5 ms parse + **16 ms an inline `mise hook-env`** |
+| `atuin init bash` | ~35 ms | 6 ms spawn + ~30 ms executing a 1468-line blob |
+| bash-completion framework | 5 ms | — |
+| `compinit` (zsh) | 25–35 ms | 14 ms of it is `compaudit` |
+
+`mise hook-env` is the same 15–17 ms call the prompt makes before every command,
+so hook mode also pays it per Enter. `DOTFILES_MISE_SHIMS=1` switches to
+`mise activate --shims` (a one-line PATH export, ~7 ms, no per-prompt hook) and
+gives up per-directory tool switching; shims stay on PATH via `80_path.sh`
+either way. Caching the atuin blob was measured too and rejected: it must be
+*executed* every shell, so a cache saves only the 6 ms spawn.
+
+The warm figures above (51 / 83 ms) were measured before atuin was installed in
+the test environment; with atuin wired up the same chain is ~120 ms (bash) and
+~150 ms (zsh), which is mise's ~30 ms plus atuin's ~40 ms on top.
+
 ## 6. Order and the guard
 
 1. upstream (`§2`)

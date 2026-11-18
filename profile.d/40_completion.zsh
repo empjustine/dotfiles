@@ -78,8 +78,19 @@ if command -v df_due >/dev/null 2>&1; then
 	df_due completions && _df_refresh=1
 fi
 
+# `mise activate` is the one eager generator left (DR-041 kept it: it is a hook,
+# not a completion). Profiled 2026-11-18 (DR-045): ~28 ms net in zsh, of which
+# ~9 ms is the spawn and the rest an inline `mise hook-env` — the same call the
+# prompt makes before every command. DOTFILES_MISE_SHIMS=1 gives a PATH export
+# (~8 ms) and no per-prompt hook, at the cost of per-directory tool switching.
 mise_bin="$(_dotfiles_mise)"
-[ -n "$mise_bin" ] && eval "$($mise_bin activate zsh || true)"
+if [ -n "$mise_bin" ]; then
+	if [ "${DOTFILES_MISE_SHIMS:-0}" = 1 ]; then
+		eval "$($mise_bin activate zsh --shims || true)"
+	else
+		eval "$($mise_bin activate zsh || true)"
+	fi
+fi
 
 # Refresh policy: the run-guard (every N startups or X seconds), a missing file,
 # or a tool binary newer than its file. A skipped refresh costs two -e/-nt

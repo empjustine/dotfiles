@@ -1172,3 +1172,43 @@ eval — the spawn is the smaller half.
 - **Side note:** the DR-016 auto-provision (`mise use -g atuin`) writes
   `~/.config/mise/config.toml` from a *login shell*. Deliberate, but it is a
   tool-config mutation outside `deploy.sh`, which NFR-5's spirit dislikes.
+
+## DR-045 | `mise activate` profiled: the cost is its inline `hook-env`, not parsing | Accepted (applied, opt-in) | 2026-11-18
+
+- **Context:** after DR-041 the eager remainder of an interactive start was
+  dominated by `mise activate` (29 ms bash / 34 ms zsh, measured inside the
+  chain). Question asked: can it be profiled? Yes — by splitting the spawn from
+  the eval and by comparing its own flags.
+- **Method and findings** (bash 5.2, mise 2026.11.9, baseline `bash -ic true`
+  3–4 ms):
+
+  | variant | cost |
+  |---|---|
+  | `mise activate bash` (spawn only, output discarded) | 8–9 ms |
+  | eval of the emitted blob from a file (no spawn) | 22–27 ms |
+  | spawn + eval — what the chain does | 30–32 ms |
+  | `--no-hook-env` | 12–13 ms |
+  | `--shims` (blob = one `export PATH` line) | 10–11 ms |
+  | `mise hook-env` alone | 15–17 ms |
+
+  The blob is identical in both bash modes except one line
+  (`__MISE_HOOK_ENABLED=1` vs `0`), and that line makes the *eval itself* call
+  `mise hook-env … --reason precmd` (lines 104/116 of the emitted script) — the
+  same call the prompt runs before **every** command. So of the ~27 ms net:
+  ~5 ms spawn, ~5 ms parsing 201 lines, **~16 ms an inline hook-env**. zsh has
+  the same shape (28 ms net: 9 ms spawn, a 77–121 line blob).
+- **Decision:** keep hook mode as the default — per-directory tool switching is
+  the reason mise is here — and add `DOTFILES_MISE_SHIMS=1`, which asks
+  `mise activate <shell> --shims` instead: ~20 ms off startup in bash (56 → 37
+  ms with atuin excluded) and ~16 ms off *every prompt*. Tool resolution is
+  unaffected because `80_path.sh` already puts mise's shims on PATH.
+- **Also measured and rejected:** caching the `atuin init <shell>` blob behind
+  the run-guard, the way DR-041 caches completions. Its blob is 1468 lines /
+  62 KB and must be *executed* every shell (hooks + `ATUIN_SESSION`), so
+  sourcing a cached copy saves only the 6 ms spawn and keeps the ~30 ms parse.
+  Not applied: completions could be deferred because a completer body is only
+  needed at TAB time; history hooks are needed at every prompt.
+- **Consequences:** with atuin installed, a warm interactive bash start is
+  ~120 ms (~100 ms in shims mode) and zsh ~150 ms (~144 ms); atuin's own init
+  is ~40 ms of that and mise's hook ~30 ms. That is the floor for this design
+  without dropping features, and it is now recorded rather than guessed.
