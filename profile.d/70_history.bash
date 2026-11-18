@@ -53,15 +53,40 @@ done
 unset cand mise_attempted
 
 if [ -n "$atuin_bin" ]; then
-	# atuin ≥ 18.18.x bundles bash-preexec (V0.7.0) itself and
-	# auto-loads it at `atuin init` time when no other preexec
-	# backend (ble.sh, external bash-preexec) is present; loading an
-	# external copy first would set bash_preexec_imported and make
-	# atuin skip its newer, history-reliable builtin (DR-025,
-	# DR-037). The vendored bash-preexec.sh is therefore no longer
-	# sourced — atuin's bundled one is the only preexec backend.
-	# shellcheck source=/dev/null
-	eval "$("$atuin_bin" init bash --disable-up-arrow || true)"
+	# atuin ≥ 18.18.x bundles bash-preexec (V0.7.0) itself and auto-loads it at
+	# `atuin init` time when no other preexec backend is present (DR-025,
+	# DR-037) — nothing is sourced here; atuin's bundled copy is the backend.
+	#
+	# Never `|| true` this. An init that prints nothing installs no hooks, and
+	# the shell then records history into nowhere while looking perfectly
+	# healthy (DR-044).
+	_atuin_init="$("$atuin_bin" init bash --disable-up-arrow)"
+	_atuin_rc=$?
+	if [ "$_atuin_rc" -ne 0 ] || [ -z "$_atuin_init" ]; then
+		printf '%s\n' "dotfiles: 'atuin init bash' produced no script (exit $_atuin_rc) — history capture is OFF in this shell (DR-044)" >&2
+	else
+		eval "$_atuin_init"
+		# The generated hooks call bare `atuin` from $PATH, not the binary wired
+		# up here. Two different atuins (or none) means every command goes to a
+		# different database, or to nothing, with no error at all (DR-044).
+		_atuin_hook_bin="$(command -v atuin 2>/dev/null)"
+		if [ -z "$_atuin_hook_bin" ]; then
+			printf '%s\n' "dotfiles: atuin is not on \$PATH, so the history hook records nothing (DR-044)" >&2
+		elif [ "$_atuin_hook_bin" != "$atuin_bin" ]; then
+			# A mise shim for init and mise's own bin at prompt time is the normal
+			# case; anything else means two different atuins.
+			case "$atuin_bin:$_atuin_hook_bin" in
+				*mise*:*mise*) : ;;
+				*) printf '%s\n' "dotfiles: the history hook will call $_atuin_hook_bin, not the $atuin_bin it was wired from — history may go elsewhere (DR-044)" >&2 ;;
+			esac
+		fi
+		unset _atuin_hook_bin
+	fi
+	unset _atuin_init _atuin_rc
+elif command -v atuin >/dev/null 2>&1; then
+	# atuin exists but not where this repo trusts it (DR-016): the hooks are
+	# off, which would otherwise look exactly like random history loss (DR-044).
+	printf '%s\n' "dotfiles: atuin is on \$PATH but in no allowlisted location — history hooks are off (DR-016, DR-044)" >&2
 fi
 
 unset atuin_bin

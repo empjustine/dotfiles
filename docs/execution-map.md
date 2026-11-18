@@ -304,7 +304,8 @@ applies to `atuin init zsh` (zle widgets, hooks, array handling) and
 Second, independent reason: the two history paths are not equivalent today.
 Bash has no native `preexec`, so atuin's bash integration installs
 `PROMPT_COMMAND`/preexec machinery, while zsh has native `precmd`/`preexec`.
-The bash path is currently the *degraded* one (§10). Merging bodies would put
+The bash path is the one with the observed failure history (§10 — now
+understood as a *resolution* problem, not an init-ordering one). Merging bodies would put
 a working path and a broken one in the same file and remove the ability to fix
 or tune them independently.
 
@@ -312,36 +313,47 @@ Verdict: `.sh` stays POSIX-only logic; `.bash`/`.zsh` keep shell-generated
 wiring. The only shareable part is the pure discovery cascade (POSIX function),
 which belongs to the deferred helper-lib decision (b/c) — not to a merge.
 
-## 10. Open functional issue: atuin history loss under bash
+## 10. atuin history loss under bash: diagnosed (DR-044)
 
-Reported on the real host: bash loses history entries at random even after the
-vendored bash-preexec was removed (DR-037) and atuin ≥ 18.18 supplies its own
-backend. Recorded here because it blocks every "simplify the history path"
-idea, and because our invocation can hide the failure:
+History was being lost at random under bash. Diagnosed 2026-11-18 against
+atuin 18.24.8 by driving real pty sessions (`script -qec`), not by reading:
+**the hooks install correctly in every configuration this repo can produce** —
+plain `atuin init`, the full chain, and `mise activate` before or after
+`atuin init` each recorded 3–4 of 3–4 commands. `PROMPT_COMMAND` comes out as
+the expected array (`__bp_precmd_invoke_cmd "$_"` + `__bp_interactive_mode`),
+`preexec_functions=__atuin_preexec preexec`, no `DEBUG` trap conflict.
 
-```sh
-eval "$("$atuin_bin" init bash --disable-up-arrow || true)"   # 70_history.bash
-```
+Two failure modes were then reproduced — both silent, both looking like
+"random" loss because they begin whenever resolution breaks, not at login:
 
-`|| true` turns a failing `atuin init` into an empty `eval` — i.e. **no hooks at
-all, silently, per shell**. Diagnostics to run in an affected session and in a
-clean one for comparison:
+| mechanism | trigger | what you see |
+|---|---|---|
+| **A. hook binary fails** | anything that breaks `atuin` *after* startup (a mise version pruned/removed, a shim pointing at nothing) | `__atuin_preexec` does `id=$(atuin history start … 2>/dev/null)`; the empty id makes `__atuin_precmd` return early, so **every** command from then on is unrecorded, with no message. Reproduced: 3 commands before breaking `MISE_DATA_DIR`, 0 after. |
+| **B. init and hook disagree** | a second `atuin` earlier on `$PATH` than the one the allowlist picked (brew vs system vs mise) | the hooks write to that atuin's database: main DB delta 0, no message. Reproduced with a wrapper earlier on `PATH`. Inside this chain `mise activate` usually normalizes PATH toward mise's copy, which is why it *looks* random. |
+
+A third variant was ours: `eval "$(… init … || true)"` turned a failing init
+into an empty `eval` — no hooks at all, silently.
+
+**What the tree does now** (`70_history.{bash,zsh}`, zero forks): reports a
+non-zero exit or empty init script on stderr; after a successful init, checks
+that `atuin` resolves on `$PATH` and to the same tool (mise shim vs mise bin is
+the same tool; anything else warns); and warns when atuin is on `$PATH` but in
+no allowlisted location, because "hooks quietly off" and "history randomly
+lost" are indistinguishable from the user's side.
+
+Diagnostics for an affected session (now usually unnecessary — the shell says
+it itself):
 
 ```sh
 atuin --version; atuin doctor 2>/dev/null | head -20
-declare -p PROMPT_COMMAND                  # string or array? whose hooks are in it?
-declare -F __atuin_precmd __atuin_preexec  # hooks actually installed?
-echo "preexec_imported=${bash_preexec_imported:-} bp=${__bp_imported:-} ble=${BLE_ATTACHED:-}"
+declare -p PROMPT_COMMAND                  # array, with __bp_precmd_invoke_cmd?
+declare -F __atuin_precmd __atuin_preexec  # hooks installed?
+echo "preexec=${preexec_functions[*]:-none} ble=${BLE_ATTACHED:-}"
 trap -p DEBUG                              # nothing should own DEBUG
-# does a bare shell record, with the same binary and the same terminal?
-env -i HOME="$HOME" TERM="$TERM" bash --norc -i
+ATUIN_SESSION=probe atuin history list | tail -5   # note: needs a session var
 ```
 
-Suspects, none verified yet: (1) `|| true` swallowing an init failure;
-(2) `mise activate bash` (`40_completion.bash`) installing its `PROMPT_COMMAND`
-hook *before* atuin (`70_history.bash`) and a later rewrite dropping atuin's;
-(3) `PROMPT_COMMAND` being turned into an array by something in the chain, which
-atuin's bash hook may not expect; (4) a second `atuin init` in the same process
-(the `DOTFILES_SOURCED` guard should prevent it, but a manual re-source or an
-extra interactive layer would defeat it). First cheap hardening, if it is
-pursued: report a failed `atuin init` on stderr instead of swallowing it.
+Still open by construction: mechanism A cannot be fixed from here (atuin's hook
+discards its own stderr), and mechanism B needs the hook to call a stable
+absolute path — a wrapper directory on `PATH` would do it, but that is a
+PATH-policy change (DR-014, DR-033).

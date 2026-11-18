@@ -50,8 +50,28 @@ done
 unset cand mise_attempted
 
 if [ -n "$atuin_bin" ]; then
-	# shellcheck source=/dev/null
-	eval "$("$atuin_bin" init zsh --disable-up-arrow || true)"
+	# Not `|| true`: see 70_history.bash and DR-044 — a silent init leaves the
+	# shell with no hooks and no complaint.
+	_atuin_init="$("$atuin_bin" init zsh --disable-up-arrow)"
+	_atuin_rc=$?
+	if [ "$_atuin_rc" -ne 0 ] || [ -z "$_atuin_init" ]; then
+		printf '%s\n' "dotfiles: 'atuin init zsh' produced no script (exit $_atuin_rc) — history capture is OFF in this shell" >&2
+	else
+		eval "$_atuin_init"
+		_atuin_hook_bin="$(command -v atuin 2>/dev/null)"
+		if [ -z "$_atuin_hook_bin" ]; then
+			printf '%s\n' "dotfiles: atuin is not on \$PATH, so the history hook records nothing (DR-044)" >&2
+		elif [ "$_atuin_hook_bin" != "$atuin_bin" ]; then
+			case "$atuin_bin:$_atuin_hook_bin" in
+				*mise*:*mise*) : ;;
+				*) printf '%s\n' "dotfiles: the history hook will call $_atuin_hook_bin, not the $atuin_bin it was wired from — history may go elsewhere (DR-044)" >&2 ;;
+			esac
+		fi
+		unset _atuin_hook_bin
+	fi
+	unset _atuin_init _atuin_rc
+elif command -v atuin >/dev/null 2>&1; then
+	printf '%s\n' "dotfiles: atuin is on \$PATH but in no allowlisted location — history hooks are off (DR-016, DR-044)" >&2
 fi
 
 unset atuin_bin

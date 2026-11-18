@@ -1011,9 +1011,10 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
 - **Second reason:** the two history paths are not equivalent. Bash has no
   native `preexec`, so atuin's bash integration installs `PROMPT_COMMAND`/
   preexec machinery, while zsh has native `precmd`/`preexec`. The bash path is
-  the degraded one on the real host (open issue: random history loss,
-  documented in [docs/execution-map.md](docs/execution-map.md) §10) — a merged
-  body would conflate a working and a broken path.
+  the one whose failure history is documented in
+  [docs/execution-map.md](docs/execution-map.md) §10 (now diagnosed in DR-044 as
+  a hook-time resolution problem, not init ordering) — a merged body would
+  conflate two different hook mechanisms.
 - **Consequences:** the duplicate *cascades* remain duplicated. The shareable
   part is the pure discovery cascade (a POSIX function), which depends on the
   deferred helper-lib decision (b/c) and does not require a merge.
@@ -1129,3 +1130,45 @@ eval — the spawn is the smaller half.
   else (DR-016), so a separate library made the deployed copy depend on a file
   it does not install. Same functions, same semantics, one fewer resolution
   step; `lib/` no longer exists.
+
+## DR-044 | atuin history loss under bash: diagnosed, and made visible | Accepted (applied) | 2026-11-18
+
+- **Context:** bash was losing history entries at random, on a tree where the
+  vendored bash-preexec is already gone (DR-037) and atuin ≥ 18.18 supplies its
+  own. Diagnosed here against atuin 18.24.8 in a pty harness (`script -qec`)
+  rather than by reading: the hooks themselves are installed correctly by this
+  repo in every configuration tried — plain `atuin init`, the full chain,
+  `mise activate` before or after `atuin init` — each recording 3–4 of 3–4
+  commands. So the loss is *not* init ordering, and not mise/atuin hook
+  interference.
+- **Findings, both reproduced:**
+  1. **A failing hook binary loses commands silently.** `__atuin_preexec` does
+     `id=$(atuin history start --hook -- "$1" 2>/dev/null)`; when that fails,
+     `ATUIN_HISTORY_ID` stays empty and `__atuin_precmd` returns early — the
+     command is never recorded and nothing is printed. Reproduced by breaking
+     the mise shim mid-session (`export MISE_DATA_DIR=/nonexistent`): three
+     commands before, zero after, no message, shell otherwise healthy.
+  2. **Init-time and hook-time resolution can disagree.** `atuin init` runs
+     from the binary this repo's allowlist picked, but the generated hook calls
+     bare `atuin` from `$PATH`. Reproduced with a second atuin earlier on
+     `$PATH`: every entry went to that one's database (main DB delta 0), again
+     silently. Inside this chain `mise activate` normally normalizes PATH
+     toward mise's own copy, which is exactly why the failure looks random.
+  3. **Our own `|| true` hid a third variant:** when the resolved binary could
+     not run at init at all, the `eval` received an empty string — no hooks,
+     no message.
+- **Decision:** stop swallowing. `70_history.{bash,zsh}` now (a) run the init
+  capturing its output and report a non-zero exit *or* an empty script, (b) after
+  a successful init check that `atuin` resolves on `$PATH` and to the same tool
+  (mise shim vs mise bin counts as the same tool; anything else warns), and
+  (c) warn when atuin is on `$PATH` but in no allowlisted location (DR-016),
+  because "hooks quietly off" looks identical to "history randomly lost".
+  Zero forks: `command -v` and `case` are builtins.
+- **Consequences:** a failure costs one stderr line at login instead of months
+  of silent loss. Not fixed, by construction: finding 2 can only be closed by
+  making the hook call a stable absolute path — a wrapper directory on `PATH`
+  (a PATH-policy change, DR-014/DR-033) or an atuin-side fix — and finding 1
+  cannot be fixed from here at all, since the hook discards its own stderr.
+- **Side note:** the DR-016 auto-provision (`mise use -g atuin`) writes
+  `~/.config/mise/config.toml` from a *login shell*. Deliberate, but it is a
+  tool-config mutation outside `deploy.sh`, which NFR-5's spirit dislikes.
