@@ -133,6 +133,12 @@ default tooling path and default sourcing and add nothing on top.
   script directories and copies the two background-task scripts
   (`shortcuts/tasks/sshd.sh`, `shortcuts/tasks/ip.sh`) into
   `~/.shortcuts/tasks/` (DR-036).
+- **REQ-8 Throttled maintenance.** Work that mutates world state but is not
+  needed on every shell runs at most "every N startups or every X seconds",
+  configurable via `DOTFILES_RUN_EVERY` and `DOTFILES_RUN_AGE`, and privileged
+  WSL2 steps run once per boot. The guard is `lib/dotfiles.sh` (DR-043);
+  in-shell state (hooks, completions, PATH, env vars) is exempt and must run on
+  every shell, per NFR-7 (DR-041).
 
 ## 4. Non-functional requirements / constraints
 

@@ -10,6 +10,9 @@
 # outside the shell in $XDG_STATE_HOME, so the counting survives across
 # processes — which is the whole point.
 #
+# Gate: none — helpers only, no side effects of their own; the counter is
+# written only when an interactive consumer calls df_startup.
+#
 #   df_startup                 count this shell once (interactive callers only)
 #   df_due NAME [runs] [secs]  0 = due now, 1 = not due (0 disables a leg)
 #   df_stamp NAME              record that NAME ran

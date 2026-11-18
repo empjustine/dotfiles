@@ -41,6 +41,12 @@ const LOG_FILE = 'DECISIONS.md';
 /** Trees whose every file must have a row in the inventory of docs/system.md. */
 const INVENTORY_DIRS = ['profile.d', 'shortcuts/tasks', 'lib'];
 
+/** Directories whose shell files must carry a header comment (what/gate/DR). */
+const SNIPPET_DIRS = ['profile.d', 'lib'];
+
+/** How far into a file the header block may sit. */
+const HEADER_WINDOW = 16;
+
 /** Loose files that must have a row there too. */
 const INVENTORY_FILES = ['src-dotfiles.sh', 'deploy.sh', 'lint.sh', 'embed.mjs', 'unembed.mjs', 'docs/spec-check.mjs'];
 
@@ -388,6 +394,24 @@ function main() {
         }
       }
     });
+  }
+
+  // --- snippet headers (the comment half of the contract) -----------------
+  for (const dir of SNIPPET_DIRS) {
+    const full = path.join(root, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const name of fs.readdirSync(full).sort()) {
+      if (!/[.](sh|bash|zsh)$/.test(name)) continue;
+      const rel = dir + '/' + name;
+      const lines = fs.readFileSync(path.join(root, rel), 'utf8').split('\n');
+      const head = lines.slice(1, 1 + HEADER_WINDOW).filter((line) => line.startsWith('#'));
+      if (!head.some((line) => /Gate:/.test(line))) {
+        report(rel, 'snippet-header', "no 'Gate:' line in the header — say when this snippet is allowed to run");
+      }
+      if (!head.some((line) => /DR-\d{3}/.test(line))) {
+        report(rel, 'snippet-header', 'no DR-### in the header — point at the record that decided this shape');
+      }
+    }
   }
 
   // --- output ------------------------------------------------------------

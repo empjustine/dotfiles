@@ -95,6 +95,24 @@ One word only. The qualifier goes in the body — for a record, a
   first `##`, so a reader arriving from a broken link is not dropped into a
   section about something else.
 
+## The comment contract for shell files
+
+The Markdown has a shape; so do the files it describes. Every file under
+`profile.d/` and `lib/` opens — right after the shebang — with a header that
+says, in this order:
+
+1. **what it is** (`# 40_completion.zsh — tab completion for interactive zsh`),
+2. **when it may run** (`# Gate: zsh only, interactive only.` — for the
+   entrypoint-sourced snippets; `lib/` says `Gate: none — helpers only.`),
+3. **what it touches** (forks, files, exports, and the throttle if it has one),
+4. **which records decided it** — at least one `DR-###`.
+
+`docs/spec-check.mjs` enforces the two mechanical parts (`Gate:` and a `DR-###`
+within the first 16 lines) as `snippet-header`; the prose is reading work. The
+point is not ceremony: the execution map's per-snippet table and the gate's
+inventory are generated from the same facts, and a file that cannot state its
+gate is a file whose gate nobody knows.
+
 ## What the gate checks, and what it does not
 
 `node docs/spec-check.mjs [root]` exits 0 clean, 1 findings, 2 unreadable tree,
@@ -106,7 +124,8 @@ and prints `path[:line]: [code] sentence` per finding. Codes:
 `parent-not-index`, `edge-unresolved`, `root-missing`, `opening-block-missing`,
 `doc-link-unresolved`, `doc-anchor-unresolved`, `section-cite-unresolved`,
 `log-missing`, `dr-format`, `dr-numbering`, `dr-status-unknown`,
-`dr-unresolved`, `inventory-missing`, `inventory-stale`, `doc-path-stale`.
+`dr-unresolved`, `inventory-missing`, `inventory-stale`, `doc-path-stale`,
+`snippet-header`.
 
 What it deliberately does **not** decide: whether the chosen `type` is the right
 scope judgement, whether a `status` is honest, whether a record's prose still
