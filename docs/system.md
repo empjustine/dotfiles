@@ -22,7 +22,7 @@ $PROFILE / ~/.bash_profile / ~/.bashrc / ~/.zprofile / ~/.zshrc
         │  (each is a copy of src-dotfiles.sh)
         ▼
 src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
-        │
+        │  sources lib/dotfiles.sh (run-guard helpers, DR-043)
         ▼  loop over ${DOTFILES:-$HOME/dotfiles}/profile.d/* in glob order
            *.sh   POSIX, every shell (zsh: wrapped in `emulate -L ksh`)
            *.bash bash-only    (guarded on $BASH_VERSION)
@@ -33,7 +33,8 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 
 | file | role |
 |---|---|
-| `src-dotfiles.sh` | unified POSIX entrypoint; guard + `profile.d/` loop. Copied verbatim to the rc targets by `deploy.sh` |
+| `src-dotfiles.sh` | unified POSIX entrypoint; guard, `lib/dotfiles.sh` source, then the `profile.d/` loop. Copied verbatim to the rc targets by `deploy.sh` |
+| `lib/dotfiles.sh` | shared POSIX helpers sourced before the loop: `df_startup` / `df_due` / `df_stamp`, the run-guard behind every throttled refresh (DR-043) |
 | `profile.d/10_wsl2.sh` | WSL2 plumbing: `XDG_RUNTIME_DIR` normalization, then (interactive, one per-boot stamp) tmpfs ownership, `fstrim /`, shared-root propagation, cross-distro bind mount, gnome-keyring (DR-007, DR-038) |
 | `profile.d/20_core.bash` | sources the distro/cloud/system bashrc (`/etc/bashrc`, `/etc/bash.bashrc`, Termux profile, Google/Oracle cloud bashrc) (DR-020) |
 | `profile.d/40_completion.{bash,zsh}` | tab completion: bash-completion framework / `compinit`, brew shellenv, mise activate, uv/uvx, kubectl — identical allowlist cascade + mise-shim trust gate in both (DR-021, DR-026, DR-038) |
@@ -132,9 +133,15 @@ Per-environment behavior:
   allowlist cascade and the same mise-shim trust gate in both files
   (byte-identical block, DR-038); bash-completion framework / `compinit` +
   brew shellenv (the framework file is probed with `-r` — distros install
-  it non-executable); `mise activate <shell>`, uv/uvx shell completion,
-  `kubectl completion <shell>` — all eval'd as `eval "$(<tool> …)"`
-  (DR-021, DR-026, DR-034).
+  it non-executable); `mise activate <shell>` (eager: it is a hook).
+  uv/uvx/kubectl completions are **generated into a cache and loaded
+  lazily** (DR-041): zsh writes `#compdef` files into
+  `$XDG_DATA_HOME/zsh/site-functions/` and lets `compinit` autoload them on
+  the first TAB; bash writes blobs into
+  `$XDG_CACHE_HOME/dotfiles/completions/` and registers a self-replacing
+  `complete -F _df_lazy_comp` stub. Both refresh behind the run-guard
+  (DR-043) or when a tool binary is newer than its blob — see
+  [execution-map.md](execution-map.md) §5.1 (DR-021, DR-026, DR-034).
 - **KUBECONFIG** (`60_containers.sh`): if `~/.kube/config.d` exists *and
   contains files*, `KUBECONFIG` is the list of its files joined with `:`;
   an empty or missing directory leaves an inherited KUBECONFIG untouched
@@ -155,12 +162,15 @@ Per-environment behavior:
 |---|---|---|
 | `~/storage/shared/Documents/markor/ip.json` | `shortcuts/tasks/ip.sh` (Termux:Widget background task — no shell startup writes it) | external Android app (Markor) |
 | `$XDG_RUNTIME_DIR/.dotfiles-wsl-<boot_id>-$(id -u)` | `10_wsl2.sh` | once-per-boot gate for the whole privileged WSL2 block (tmpfs, gone on reboot) |
+| `$XDG_CACHE_HOME/dotfiles/completions/{uv,uvx,kubectl}.bash` | `40_completion.bash` | lazily sourced by `_df_lazy_comp` on the first TAB (DR-041) |
+| `$XDG_DATA_HOME/zsh/site-functions/_{uv,uvx,kubectl}` | `40_completion.zsh` | `compinit` autoloads them on first completion (DR-041) |
+| `$XDG_STATE_HOME/dotfiles/startups` + `stamps/<name>` | `lib/dotfiles.sh` (`df_startup`/`df_stamp`) | the run-guard: "every N startups or every X seconds" (DR-043) |
 | `/mnt/wsl/$WSL_DISTRO_NAME` | `10_wsl2.sh` | other WSL2 distros (direct FS access) |
 | `$XDG_STATE_HOME/{duckdb,node_repl,sqlite}_history` | `70_history.sh` | the respective REPLs |
 | `~/.termux/boot`, `~/.termux/widget/dynamic_shortcuts`, `~/bin` | `deploy.sh` (Termux, empty dirs) | Termux:Widget / Termux:Boot |
 | `~/.shortcuts/tasks/sshd.sh` | `deploy.sh` (copies `shortcuts/tasks/sshd.sh`) | Termux:Widget background task (sshd restart) |
 | `~/.shortcuts/tasks/ip.sh` | `deploy.sh` (copies `shortcuts/tasks/ip.sh`) | Termux:Widget background task (ip.json refresh + toast) |
-| `report.txt` | `lint.sh` | per-run shfmt/shellcheck/`zsh -n` log; truncated at each run |
+| `report.txt` | `lint.sh` | per-run shfmt/shellcheck/`zsh -n`/docs-gate log; truncated at each run |
 
 ## 7. Deployment & maintenance
 

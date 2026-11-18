@@ -1,4 +1,8 @@
 #!/bin/zsh
+# 90_navigation.zsh — xterm-256color keybindings (DR-017).
+#
+# Gate: zsh only, interactive only, TERM=xterm-256color. A different TERM is
+# a silent no-op — zsh defaults are correct there, this is not a shell error.
 
 [ -n "$ZSH_VERSION" ] || { printf '%s\n' "dotfiles: zsh-only snippet sourced under a non-zsh shell; skipping" >&2; return 0; }
 

@@ -155,10 +155,15 @@ default tooling path and default sourcing and add nothing on top.
 - **NFR-6 No state leakage.** Snippet-internal scratch variables are unset
   before returning; only intentional exports persist in the session
   (DR-019).
-- **NFR-7 Startup budget.** Interactive startup stays cheap: no
-  unbounded per-shell spawning, no repeated privileged work. Only in-shell
-  state (completions, hooks, PATH, env vars) may run on every shell; work
-  that mutates world state is throttled or pre-checked (DR-038).
+- **NFR-7 Startup budget.** Interactive startup stays cheap: no unbounded
+  per-shell spawning, no repeated privileged work. Only in-shell state
+  (completions, hooks, PATH, env vars) may run on every shell; work that
+  mutates world state is pre-checked, stamp-gated or throttled by the
+  run-guard — "every N startups or every X seconds", with N and X
+  configurable (DR-038, DR-043). Budget held as of 2026-11-18: an interactive
+  bash start is ~51 ms (was ~110 ms) and an interactive zsh start ~83 ms (was
+  ~196 ms); the periodic cache refresh costs one slower start in every 50.
+  Completions must still work on the first TAB (DR-041).
 
 ## 5. Non-goals
 

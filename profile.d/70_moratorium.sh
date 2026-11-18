@@ -1,4 +1,11 @@
 #!/bin/sh
+# 70_moratorium.sh — supply-chain policy as environment variables (DR-005,
+# DR-006, DR-011).
+#
+# Gate: none; no file is written and no tool config is mutated — the policy
+# travels with the shell, so it applies in every environment. Note: the file
+# still muxes three policies (release-age window, npm/pip hardening, uv
+# behaviour); splitting them is deferred, see DR-038's consequences.
 
 # @see https://mise.jdx.dev/configuration/settings.html#minimum_release_age
 MISE_MINIMUM_RELEASE_AGE="24h"

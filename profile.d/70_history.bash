@@ -1,4 +1,10 @@
 #!/bin/bash
+# 70_history.bash — atuin history hooks, interactive bash (DR-016, DR-037).
+#
+# Gate: bash only, interactive only. bash has no native preexec, so atuin
+# installs its own bash-preexec at `atuin init` time — the known random
+# history loss lives on this path: read docs/execution-map.md §10 before
+# changing the invocation.
 
 [ -n "$BASH_VERSION" ] || {
 	printf '%s\n' "dotfiles: bash-only snippet sourced under a non-bash shell; skipping" >&2

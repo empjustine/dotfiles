@@ -1,4 +1,15 @@
 #!/bin/zsh
+# 40_completion.zsh — tab completion for interactive zsh (DR-017, DR-018).
+#
+# What it does: brew shellenv, compinit, and completions for mise/uv/uvx/kubectl.
+# The uv/uvx/kubectl generators emit `#compdef` files, which is zsh's own lazy
+# mechanism: they are written into a $fpath directory behind the run-guard
+# (lib/dotfiles.sh, DR-043) and autoloaded by compinit on the first TAB that
+# needs them, so a shell start never evals a completion blob (DR-041).
+# `mise activate` stays eager — it is a hook, not a completion.
+#
+# Gate: zsh only, interactive only. Side effects: PATH (brew), the
+# site-functions directory, compdump.
 
 [ -n "$ZSH_VERSION" ] || { printf '%s\n' "dotfiles: zsh-only snippet sourced under a non-zsh shell; skipping" >&2; return 0; }
 
@@ -9,12 +20,7 @@ case "$-" in
 	*) return 0 ;;
 esac
 
-autoload -U compinit
-compinit
-setopt COMPLETE_IN_WORD
-
 [ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh || true)"
-
 # Allowlist cascade (DR-016: an arbitrary $PATH lookup is never trusted).
 # Candidate list and trust gate are identical in 40_completion.bash and
 # 40_completion.zsh — they must stay identical.
@@ -58,20 +64,71 @@ _dotfiles_mise() {
 	done
 	return 1
 }
+# --- completions via $fpath (DR-041) ----------------------------------------
+# The generated #compdef files are the autoload stubs: write them once (guarded),
+# then let compinit pick them up. `_df_zfuncs` comes first in fpath so it wins
+# over any stale copy a distro package left behind.
+_df_zfuncs="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+[ -d "$_df_zfuncs" ] || mkdir -p -- "$_df_zfuncs"
+fpath=("$_df_zfuncs" $fpath)
+
+_df_refresh=0
+if command -v df_due >/dev/null 2>&1; then
+	df_startup
+	df_due completions && _df_refresh=1
+fi
 
 mise_bin="$(_dotfiles_mise)"
 [ -n "$mise_bin" ] && eval "$($mise_bin activate zsh || true)"
 
+# Refresh policy: the run-guard (every N startups or X seconds), a missing file,
+# or a tool binary newer than its file. A skipped refresh costs two -e/-nt
+# builtins per tool and nothing else.
 uv_bin="$(_dotfiles_tool uv)"
-[ -n "$uv_bin" ] && eval "$($uv_bin generate-shell-completion zsh || true)"
+if [ -n "$uv_bin" ]; then
+	_df_file="$_df_zfuncs/_uv"
+	if [ "$_df_refresh" = 1 ] || [ ! -e "$_df_file" ] || [ "$uv_bin" -nt "$_df_file" ]; then
+		if "$uv_bin" generate-shell-completion zsh >|"$_df_file.tmp" 2>/dev/null; then
+			mv -f -- "$_df_file.tmp" "$_df_file"
+		else
+			rm -f -- "$_df_file.tmp"
+		fi
+	fi
+fi
 
 uvx_bin="$(_dotfiles_tool uvx)"
-[ -n "$uvx_bin" ] && eval "$($uvx_bin --generate-shell-completion zsh || true)"
+if [ -n "$uvx_bin" ]; then
+	_df_file="$_df_zfuncs/_uvx"
+	if [ "$_df_refresh" = 1 ] || [ ! -e "$_df_file" ] || [ "$uvx_bin" -nt "$_df_file" ]; then
+		if "$uvx_bin" --generate-shell-completion zsh >|"$_df_file.tmp" 2>/dev/null; then
+			mv -f -- "$_df_file.tmp" "$_df_file"
+		else
+			rm -f -- "$_df_file.tmp"
+		fi
+	fi
+fi
 
 kubectl_bin="$(_dotfiles_tool kubectl)"
-[ -n "$kubectl_bin" ] && eval "$($kubectl_bin completion zsh || true)"
+if [ -n "$kubectl_bin" ]; then
+	_df_file="$_df_zfuncs/_kubectl"
+	if [ "$_df_refresh" = 1 ] || [ ! -e "$_df_file" ] || [ "$kubectl_bin" -nt "$_df_file" ]; then
+		if "$kubectl_bin" completion zsh >|"$_df_file.tmp" 2>/dev/null; then
+			mv -f -- "$_df_file.tmp" "$_df_file"
+		else
+			rm -f -- "$_df_file.tmp"
+		fi
+	fi
+fi
 
-# zsh: plain `unset` only removes *parameters* — the helpers are functions, so
-# they need `-f` or they leak into the interactive shell (verified 2026-11-18).
-unset mise_bin uv_bin uvx_bin kubectl_bin
+if [ "$_df_refresh" = 1 ] && command -v df_stamp >/dev/null 2>&1; then
+	df_stamp completions
+fi
+
+# compinit runs after the writes: it reads the #compdef lines from fpath now,
+# and the function bodies load on the first completion that needs them.
+autoload -U compinit
+compinit
+setopt COMPLETE_IN_WORD
+
+unset _df_zfuncs _df_refresh _df_file uv_bin uvx_bin kubectl_bin mise_bin
 unset -f _dotfiles_tool _dotfiles_mise

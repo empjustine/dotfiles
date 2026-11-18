@@ -1,10 +1,15 @@
 #!/bin/sh
-# Unified dotfiles entrypoint: loops $DOTFILES/profile.d and sources each
-# snippet (contract documented in docs/system.md).
+# Unified dotfiles entrypoint: guards, sources lib/dotfiles.sh, then loops
+# $DOTFILES/profile.d and sources each snippet. The snippet contract is in
+# docs/system.md §4, the expected execution shapes and their costs are in
+# docs/execution-map.md, and the documentation contract itself is in
+# docs/spec-standard.md.
 #
 # Snippet extensions: *.sh — POSIX, sourced by every shell (under zsh this
 # is wrapped in `emulate -L ksh` so options stay local to the helper while
 # the snippet's exports still escape); *.bash — bash-only; *.zsh — zsh-only.
+# Shell-generated code (completions, zsh widgets) must never move into *.sh:
+# `emulate -L ksh` changes the semantics it runs under (DR-040).
 #
 # The interpreter may be dash (e.g. /etc/profile.d deployment), so *.sh
 # snippets must stay POSIX-clean (no [[, <(...), no `local`, no `source`).
@@ -51,6 +56,16 @@ _src_one() {
 		*) : ;;
 	esac
 }
+
+# Shared helpers first (DR-043): the run-guard the throttled snippets need.
+# Optional by construction — a checkout without lib/ still runs, minus the
+# throttles, and every caller guards on the helper being defined.
+_df_lib="${DOTFILES:-$HOME/dotfiles}/lib/dotfiles.sh"
+if [ -r "$_df_lib" ]; then
+	# shellcheck source=/dev/null
+	. "$_df_lib"
+fi
+unset _df_lib
 
 for rc in "${DOTFILES:-$HOME/dotfiles}/profile.d/"*; do
 	_src_one "$rc"

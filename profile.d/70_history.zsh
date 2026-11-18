@@ -1,4 +1,9 @@
 #!/bin/zsh
+# 70_history.zsh — atuin history hooks, interactive zsh (DR-016, DR-037).
+#
+# Gate: zsh only, interactive only. zsh has native precmd/preexec, so no
+# bash-preexec is involved — this is the healthy counterpart of the bash
+# path described in docs/execution-map.md §10.
 
 [ -n "$ZSH_VERSION" ] || { printf '%s\n' "dotfiles: zsh-only snippet sourced under a non-zsh shell; skipping" >&2; return 0; }
 

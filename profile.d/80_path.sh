@@ -1,4 +1,10 @@
 #!/bin/sh
+# 80_path.sh — PATH policy (DR-014, DR-033; the Win32 regime went with
+# DR-038).
+#
+# Gate: none, but the wholesale reset is skipped on cloud shells and Termux,
+# which own their PATH. Side effect: replaces PATH on desktop/WSL2 hosts and
+# exports ANDROID_HOME (moving that export out is deferred, DR-038).
 
 if [ -d "${HOME}/Android/Sdk" ]; then
 	ANDROID_HOME="${HOME}/Android/Sdk"

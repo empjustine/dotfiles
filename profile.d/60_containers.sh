@@ -1,8 +1,10 @@
 #!/bin/sh
-
-# KUBECONFIG from ~/.kube/config.d. Only set when the directory actually
-# contains files: an empty config.d must not clobber an inherited KUBECONFIG
-# (DR-032, DR-034).
+# 60_containers.sh — KUBECONFIG from ~/.kube/config.d (DR-032, DR-043).
+#
+# Gate: none — env-only and cheap, so every shell and every interactivity.
+# Side effect: exports KUBECONFIG; an inherited one is left alone when the
+# directory is missing or empty — an empty config.d must not clobber it
+# (DR-034).
 if [ -d "${HOME}/.kube/config.d" ]; then
 	kube_list="$(find "${HOME}/.kube/config.d" -type f | tr '\n' ':')"
 	if [ -n "$kube_list" ]; then

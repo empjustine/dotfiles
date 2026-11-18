@@ -1,4 +1,7 @@
 #!/bin/sh
+# lint.sh — the repository gate: shfmt + shellcheck over *.sh/*.bash,
+# `zsh -n` over *.zsh, then the documentation gate (docs/spec-check.mjs).
+# Everything lands in report.txt, truncated per run (DR-034, DR-042).
 
 set -x
 

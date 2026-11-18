@@ -998,7 +998,7 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   part is the pure discovery cascade (a POSIX function), which depends on the
   deferred helper-lib decision (b/c) and does not require a merge.
 
-## DR-041 | zsh completions via `$fpath` autoload + throttled refresh; bash via a cached blob | Proposed | 2026-11-18
+## DR-041 | Lazy completions: `$fpath` autoload for zsh, a self-replacing stub for bash, one throttled refresh | Accepted (applied) | 2026-11-18
 
 - **Context:** after DR-038 the startup budget is dominated by generated
 completion blobs. Measured 2026-11-18: bash chain 106–114 ms (bare 3 ms),
@@ -1017,8 +1017,23 @@ eval — the spawn is the smaller half.
   ~35–40 ms off bash, with completions still available on first TAB (later
   instead of eagerly). Cost: a cache directory and an invalidation rule to
   get right, and completion changes made by a tool upgrade become visible on
-  the next refresh rather than immediately. Deferred: it is the first item to
-  pick up after (b)/(c).
+  the next refresh rather than immediately.
+- **Applied (2026-11-18, same day):** `40_completion.{bash,zsh}` no longer eval
+  a blob at startup. zsh writes `#compdef` files into
+  `$XDG_DATA_HOME/zsh/site-functions/` (`_uv`, `_uvx`, `_kubectl`) before
+  `compinit` runs, which autoloads them on first completion; bash writes blobs
+  into `$XDG_CACHE_HOME/dotfiles/completions/` and registers
+  `complete -F _df_lazy_comp <tool>`, a stub that sources the blob (which
+  replaces its own registration with the real completer) and dispatches to it.
+  The refresh is gated by `df_due` (DR-043: every 50 startups or 86400 s,
+  overridable) and additionally forced when a tool binary is newer than its
+  blob. `mise activate`, `brew shellenv` and `atuin init` stay eager — hooks
+  and PATH, not completions. Measured after: interactive bash 106-114 ms →
+  **51 ms** warm (108 ms on the one-in-50 refresh), interactive zsh 196 ms →
+  **83 ms** warm (148 ms when refreshing); the zsh autoload state was verified
+  (`functions[_uv]` is the unloaded `autoload -XU` stub, `_comps[uv]=_uv`), and
+  the bash stub was verified to flip `complete -p uv` from `-F _df_lazy_comp`
+  to the blob's own `-F _uv` on the first call.
 
 ## DR-042 | Adopt an adapted spec-graph contract and a documentation gate | Accepted (applied) | 2026-11-18
 
@@ -1060,3 +1075,31 @@ eval — the spawn is the smaller half.
   edits that previously passed silently now fail (by design). What the gate
   cannot judge — whether a `status` is honest, whether a claim is still true —
   stays reading work; `docs/known-issues.md` is where a reader records it.
+
+## DR-043 | One shared helper lib and a run-guard (`df_due`) for throttled work | Accepted (applied) | 2026-11-18
+
+- **Context:** the very first requirement of this review — "only run where
+  running matters, but still run every N startups / every X time elapsed" — has
+  no home in the current shape: the only throttle in the tree was the WSL2
+  per-boot stamp, hand-rolled inline, and DR-041 needs the same decision in two
+  shell-specific snippets. Two copies of a stateful guard would be the same
+  divergence trap DR-038 catalogued.
+- **Decision:** `lib/dotfiles.sh`, a POSIX/dash-clean helper sourced once by
+  `src-dotfiles.sh` before the snippet loop (optional: every caller guards on
+  the helper existing), exposing three functions: `df_startup` (count this
+  interactive shell once per process), `df_due NAME [runs] [secs]`
+  (0 = due now, 0 disables a leg) and `df_stamp NAME`. State is
+  `$XDG_STATE_HOME/dotfiles/{startups,stamps/<name>}` holding
+  `<startup-count> <epoch>`; defaults are `DOTFILES_RUN_EVERY=50` and
+  `DOTFILES_RUN_AGE=86400`, overridable per call site. Time comes from
+  builtins where they exist (zsh `EPOCHSECONDS` after `zmodload zsh/datetime`,
+  bash `printf -v '%(%s)T'`), so the guard forks nothing; only a dash caller
+  (the `/etc/profile.d` case, which never calls it) would need `date`.
+- **Consequences:** one mechanism instead of one per caller, and the first user
+  is the completion cache (DR-041). Cost: one small file write per interactive
+  shell (the counter) — the only unconditional world write left in the startup
+  path, kept deliberately because "every N" cannot be answered without a
+  counter. It is called only by interactive, in-shell consumers, never by the
+  non-interactive path. The guard is *not* for work that must self-heal (the
+  REPL `mkdir` pre-check stays a `-d` test) and *not* for in-shell state
+  (completions, hooks, PATH) — those must run every shell, which is NFR-7.

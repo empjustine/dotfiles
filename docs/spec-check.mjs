@@ -39,7 +39,7 @@ const ROOT_ID = 'index';
 const LOG_FILE = 'DECISIONS.md';
 
 /** Trees whose every file must have a row in the inventory of docs/system.md. */
-const INVENTORY_DIRS = ['profile.d', 'shortcuts/tasks'];
+const INVENTORY_DIRS = ['profile.d', 'shortcuts/tasks', 'lib'];
 
 /** Loose files that must have a row there too. */
 const INVENTORY_FILES = ['src-dotfiles.sh', 'deploy.sh', 'lint.sh', 'embed.mjs', 'unembed.mjs', 'docs/spec-check.mjs'];

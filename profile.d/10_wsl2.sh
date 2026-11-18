@@ -1,4 +1,10 @@
 #!/bin/sh
+# 10_wsl2.sh — WSL2 plumbing (DR-007, DR-017, DR-038).
+#
+# Gate: $WSL_DISTRO_NAME, then case "$-" — everything privileged is
+# interactive-only. Does: XDG_RUNTIME_DIR slash strip (always); per boot:
+# tmpfs ownership, fstrim, shared-root propagation, /mnt/wsl bind; then the
+# keyring bootstrap. Throttle: one per-boot stamp (docs/execution-map.md §4).
 
 if [ -n "$WSL_DISTRO_NAME" ]; then
 

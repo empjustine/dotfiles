@@ -30,7 +30,9 @@ layer 1  upstream    /etc/profile, /etc/profile.d/*.sh, /etc/bashrc,
 
 layer 2  dotfiles    ~/.bash_profile | ~/.bashrc | ~/.zprofile | ~/.zshrc
                      = byte-identical copy of src-dotfiles.sh
-                     -> DOTFILES_SOURCED guard -> profile.d/* in glob order
+                     -> DOTFILES_SOURCED guard
+                     -> lib/dotfiles.sh (run-guard helpers, DR-043)
+                     -> profile.d/* in glob order
 ```
 
 The two layers interact in exactly one place: `profile.d/20_core.bash`
@@ -110,31 +112,37 @@ exactly what the `case "$-" in *i*)` gates protect (DR-017).
 |---|---|---|---|---|
 | `10_wsl2.sh` | `$WSL_DISTRO_NAME`, then `I` for everything privileged | 0 (non-WSL / non-I); up to 4 `sudo` + 2 `findmnt` | strip `XDG_RUNTIME_DIR` slash; per boot: tmpfs ownership, fstrim, mounts; keyring start | per-boot stamp `.dotfiles-wsl-<boot_id>-<uid>`; keyring by `GNOME_KEYRING_CONTROL` |
 | `20_core.bash` | `bash` | 0 | re-sources upstream rc | none (must run every shell) |
-| `40_completion.bash/.zsh` | `bash`/`zsh`, then `I` | up to 3 generators (`mise`, `uv`, `uvx`) + `kubectl`; each output eval'd | none | none — in-shell state, must run per shell (blob caching is proposed, not applied) |
+| `40_completion.bash/.zsh` | `bash`/`zsh`, then `I` | 0 warm (`mise activate` is a hook: 1 generator + eval, ~29 ms); **4 on a refresh** (`mise`, `uv`, `uvx`, `kubectl`) | writes the completion cache (`$XDG_CACHE_HOME/dotfiles/completions/` or `$XDG_DATA_HOME/zsh/site-functions/`) | `df_due completions` — every `DOTFILES_RUN_EVERY` (50) startups or `DOTFILES_RUN_AGE` (86400 s), plus a forced refresh when a tool binary is newer than its blob (DR-041, DR-043) |
 | `60_containers.sh` | always | 1 (`find`) + 1 (`tr`), only when `~/.kube/config.d` exists | none (sets `KUBECONFIG`) | none (cheap) |
 | `70_history.bash/.zsh` | `bash`/`zsh`, then `I` | 1 (`atuin --version` per candidate until one validates, then `atuin init`) | none | none — hooks are in-shell state |
 | `70_history.sh` | always | 0 in steady state (2 in-shell `-d` tests; `mkdir` only when a dir is missing) | creates `$XDG_STATE_HOME`, `$XDG_CONFIG_HOME/vim`; folds legacy history files | pre-check, self-healing (no stamp) |
 | `70_moratorium.sh` | always | 0 | none (env vars only) | n/a |
 | `80_path.sh` | always | 0 | replaces `PATH` (except cloud/Termux); exports `ANDROID_HOME` | n/a |
 | `90_navigation.zsh` | `zsh`, `I`, `TERM=xterm-256color` | 0 | none (keybinds) | n/a |
+| `lib/dotfiles.sh` | sourced by the entrypoint, before the loop | 0 | one counter write in `$XDG_STATE_HOME/dotfiles/startups` when `df_startup` is called (interactive consumers only) | n/a — it *is* the guard (DR-043) |
 | `shortcuts/tasks/*.sh` | Termux:Widget task (never startup) | — | restart sshd / write `ip.json` | n/a — user-initiated |
 
 Nothing in the startup chain writes to world state on every shell any more:
-the only such writes are the WSL2 privileged block (once per boot), the
-REPL dir creation (only when missing) and the REPL history fold (only when a
-legacy file exists).
+the only such writes are the WSL2 privileged block (once per boot), the REPL
+dir creation (only when missing), the REPL history fold (only when a legacy
+file exists), the completion cache (only when the run-guard says so) — and the
+single counter file the guard itself needs to answer "every N" (DR-043).
 
 ## 5. Expected costs *(measured 2026-11-18)*
 
 | scenario | wall time |
 |---|---|
 | `bash -ic true` (bare, no dotfiles) | 3 ms |
-| interactive bash + full chain (mise+uv installed) | 106–114 ms |
+| interactive bash + full chain, **before DR-041** | 106–114 ms |
 | interactive bash + chain, `DOTFILES_SOURCED=1` (guard trips) | 5 ms |
 | `zsh -ic true` (bare) | 8 ms |
-| interactive zsh + full chain | **196 ms** |
+| interactive zsh + full chain, **before DR-041** | **196 ms** |
 | zsh: `compinit` alone | 25 ms |
 | zsh: `eval "$(uv generate-shell-completion zsh)"` | 103 ms (≈85 ms of it is the eval, not the spawn) |
+| **after DR-041** — interactive bash, warm / refresh | **51 ms** / 108 ms |
+| **after DR-041** — interactive zsh, warm / refresh | **83 ms** / 148 ms |
+| lazy registration (3 `complete` builtins) | 0 ms |
+| first TAB load: uv / kubectl | 22 ms / 4 ms |
 | zsh: the same completions via `$fpath` + lazy `compinit` autoload | 25 ms total (= bare `compinit`) |
 | zsh: `eval "$(mise activate zsh)"` | 34 ms |
 | the five `.sh` snippets under zsh (`emulate -L ksh` each) | 9 ms |
@@ -151,61 +159,61 @@ is the generated completion blobs. They must never be throttled away: they
 install in-shell state, so a skipped refresh means a shell without
 completions. What *may* be throttled is writing them to disk or to `$fpath`.
 
-### 5.1 Next lever (proposed — DR-041): lazy completions, both shells *(measured)*
+### 5.1 Lazy completions, both shells (applied — DR-041, DR-043)
 
-Completions are ~75 % of a bash startup and ~85 % of a zsh one. Both shells
-offer a way to make them cost nothing until the first TAB, and both were
-verified on 2026-11-18:
+Completions were ~75 % of a bash startup and ~85 % of a zsh one: the
+generators fork a process and their output is large (uv alone is 569 KB for
+zsh, 483 KB for bash). Both shells now load a completion only when one is
+requested.
 
-| tool | emits for zsh | emits for bash | size (zsh / bash) |
+| tool | zsh artifact | bash artifact | size (zsh / bash) |
 |---|---|---|---|
-| `uv` | `#compdef uv` | `complete … -F _uv uv` (+ `_uvx`) | 569 KB / 483 KB |
-| `uvx` | `#compdef uvx` | same blob family | — |
-| `kubectl` | `#compdef kubectl` | plain `complete` script | 8 KB / 17 KB |
+| `uv` | `#compdef uv` → `_uv` | `complete … -F _uv uv` | 569 KB / 483 KB |
+| `uvx` | `#compdef uvx` → `_uvx` | same family | 19 KB / 17 KB |
+| `kubectl` | `#compdef kubectl` → `_kubectl` | plain `complete` script | 8 KB / 17 KB |
 
-**zsh — `$fpath` autoload.** Write each generated `#compdef` file once into a
-directory on `$fpath` (e.g. `$XDG_DATA_HOME/zsh/site-functions/_uv`);
-`compinit` autoloads it on first completion. Measured: `compinit` over that
-directory is **25 ms, identical to bare `compinit`**, versus 103 ms for the
-eager `eval`, and `_comps[uv]=_uv` confirms it works. This is the idiomatic zsh
-mechanism — the blob *is* an autoload stub by construction.
+**zsh — `$fpath` autoload.** The `#compdef` files are written into
+`$XDG_DATA_HOME/zsh/site-functions/`, which is first in `$fpath`; `compinit`
+registers them and the bodies load on the first TAB. Verified: `functions[_uv]`
+is the unloaded `autoload -XU` stub and `_comps[uv]=_uv` / `_comps[uvx]=_uvx`.
 
-**bash — a lazy `complete -F` stub.** bash has no autoload for completions, but
-it does not need one: register a stub and let it replace itself on first use.
+**bash — one shared self-replacing stub.**
+
 ```bash
-_df_comp_uv() { unset -f _df_comp_uv; . "$_df_cache/uv.bash"; _uv "$@"; }
-complete -o bashdefault -o default -o nosort -F _df_comp_uv uv
+complete -o bashdefault -o default -o nosort -F _df_lazy_comp uv uvx kubectl
 ```
-Verified: `complete -p uv` goes from `-F _df_comp_uv` to the blob's own
-`-F _uv` after the first invocation, the stub removes itself, and the
-completion that triggered it still runs. Costs: registration **0 ms** (three
-`complete` builtins), first TAB 22 ms (uv, 483 KB) / 4 ms (kubectl), once per
-shell. Same pattern works for every `complete`-emitting tool.
 
-| shell | today | with lazy registration (measured) |
-|---|---|---|
-| bash interactive | 106–114 ms | ~30 ms (eager parts only) |
-| zsh interactive | 196 ms | ~67 ms (bare 8 + `compinit` 25 + `mise activate` 34) |
+`_df_lazy_comp` sources the cached blob (which replaces its own registration
+with the real completer), reads that registration back out of `complete -p` and
+dispatches to it, so the TAB that paid for the load still completes. Verified:
+`complete -p uv` flips from `-F _df_lazy_comp` to the blob's own `-F _uv`.
 
-**What must stay eager** — these are hooks and PATH, not completions, and
-deferring them changes behaviour rather than speed: `mise activate <shell>`
-(PROMPT_COMMAND/chpwd hook: 9–18 ms bash, 34 ms zsh), `brew shellenv` (PATH;
-belongs in `80_path.sh` per the deferred (c) item), `atuin init <shell>`
-(history hooks, and the degraded path is already bash's — §10).
+**Refresh — the world-state half — is behind the run-guard** (DR-043): every
+`DOTFILES_RUN_EVERY` startups (50) or `DOTFILES_RUN_AGE` seconds (86400),
+whichever comes first, and forcibly when a tool binary is newer than its blob.
+A skipped refresh costs two `-e`/`-nt` builtins per tool.
 
-**Where the run-guard fits:** the cache write (`$XDG_CACHE_HOME/dotfiles/…`) is
-the throttled part — refresh at most once per T or every N startups, and always
-when the tool binary's mtime/version changed. The registration is unconditional
-and free.
+| shell | before | after, warm | after, on a refresh |
+|---|---|---|---|
+| bash interactive | 106–114 ms | **51 ms** | 108 ms |
+| zsh interactive | 196 ms | **83 ms** | 148 ms (first ever run: ~0.95 s — compdump) |
+
+**What stays eager:** `mise activate <shell>` (29 ms bash / 34 ms zsh — a
+PROMPT_COMMAND/chpwd hook, not a completion), the bash-completion framework
+(5 ms), `compinit` (25 ms) and `brew shellenv` (PATH; belongs in `80_path.sh`
+per the deferred (c) item). Deferring those changes behaviour, not just speed.
 ## 6. Order and the guard
 
 1. upstream (`§2`)
-2. entrypoint: `DOTFILES_SOURCED` check → `DOTFILES_SOURCED=1` → glob
-   `profile.d/*` in lexicographic order (numeric prefixes enforce `10 → 90`)
+2. entrypoint: `DOTFILES_SOURCED` check → `DOTFILES_SOURCED=1` → source
+   `lib/dotfiles.sh` (if present; every caller guards on the helper existing)
+   → glob `profile.d/*` in lexicographic order (numeric prefixes enforce
+   `10 → 90`)
 3. inside the loop: shell filter by extension (`.sh` all, `.bash` bash,
    `.zsh` zsh) — a `.sh` under zsh is sourced inside `emulate -L ksh`
 4. each snippet applies its own interactivity / platform gate as its first
-   statement
+   statement; throttled work asks the run-guard (`df_startup` + `df_due`)
+   before doing anything expensive (DR-041, DR-043)
 5. the guard makes any second entry in the same process a no-op — Termux
    login (`$PREFIX/etc/profile` → `~/.bashrc` **and** `~/.bash_profile`) and
    `20_core.bash`'s profile re-source are therefore exactly one run

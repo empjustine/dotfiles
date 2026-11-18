@@ -144,6 +144,14 @@ only from an explicit, ordered allowlist of install locations; an arbitrary
   (DR-038, superseding DR-028): native Windows shells are out of scope, so
   the PE-shim spelling and the Windows data dirs were deleted from every
   cascade — WSL2 runs Linux binaries and needs none of it.
+- **Why discovery is separate from completion generation** (DR-041): the
+  cascade is cheap (in-shell `-x` probes, no forks) and runs on every
+  interactive shell; the *generators* fork a process and produce hundreds of
+  kilobytes, so their output is cached and loaded only when a completion is
+  actually requested — `$fpath` autoload for zsh, a self-replacing
+  `complete -F` stub for bash. The refresh that feeds those caches is the one
+  job behind the run-guard (DR-043), because it is world state, not in-shell
+  state.
 
 ## 6. PATH policy: two regimes
 
@@ -243,9 +251,11 @@ KUBECONFIG separator.
   not copy `profile.d/` — extending it would risk
   stale copies on previously-provisioned hosts (DR-016).
 - Snippet scratch variables are unset/removed on scope exit (DR-019, DR-034).
-- Work that mutates *world* state (mounts, fstrim, keyring, history merge)
-  is pre-checked or stamp-gated; only in-shell state runs on every shell
-  (DR-038).
+- Work that mutates *world* state (mounts, fstrim, keyring, history merge,
+  generated completion blobs) is pre-checked, stamp-gated or throttled via
+  `df_due`; only in-shell state runs on every shell (DR-038, DR-043).
+- `lib/dotfiles.sh` stays POSIX/dash-clean like every other `.sh` file, and
+  every caller of it guards on the helper existing (DR-043).
 - Every Markdown file here is a node with frontmatter, and `./lint.sh` fails on
   a broken graph, an unresolved `DR-NNN`, a stale inventory row or a link to a
   file that no longer exists (DR-042, [spec-standard.md](spec-standard.md)).

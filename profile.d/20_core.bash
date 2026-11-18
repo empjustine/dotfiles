@@ -1,4 +1,9 @@
 #!/bin/bash
+# 20_core.bash — re-source the upstream rc our entrypoint displaced (DR-020).
+#
+# Gate: bash only. Why it exists: ~/.bashrc *is* src-dotfiles.sh here, so the
+# distro's own bashrc chain never runs by itself; this puts it back, first,
+# and 80_path.sh may therefore skip the cloud shells that set their own.
 
 if [ -n "$BASH_VERSION" ]; then
 	if [ -r /etc/bashrc ]; then

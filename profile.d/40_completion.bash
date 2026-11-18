@@ -1,4 +1,15 @@
 #!/bin/bash
+# 40_completion.bash — tab completion for interactive bash (DR-017, DR-018).
+#
+# What it does: brew shellenv, the bash-completion framework, and completions
+# for mise/uv/uvx/kubectl. The generated blobs are NOT eval'd on shell start:
+# they are written to $XDG_CACHE_HOME/dotfiles/completions behind the run-guard
+# (lib/dotfiles.sh, DR-043) and sourced by a self-replacing `complete -F` stub
+# on the first TAB that needs them (DR-041). Shell start pays for discovery and
+# three `complete` builtins instead of four generator processes.
+#
+# Gate: bash only, interactive only. Side effects: PATH (brew), the completion
+# cache directory, and in-shell completer registrations.
 
 [ -n "$BASH_VERSION" ] || {
 	printf '%s\n' "dotfiles: bash-only snippet sourced under a non-bash shell; skipping" >&2
@@ -13,7 +24,7 @@ case "$-" in
 esac
 
 # The framework file is sourced, not executed: distro packages install it
-# non-executable (0644), so probe -r.
+# non-executable (0644), so probe -r. Eager on purpose — it *is* the framework.
 if [ -r /etc/profile.d/bash_completion.sh ]; then
 	# shellcheck source=/dev/null
 	. /etc/profile.d/bash_completion.sh
@@ -31,7 +42,6 @@ else
 	done
 	unset bash_completion
 fi
-
 # Allowlist cascade (DR-016: an arbitrary $PATH lookup is never trusted).
 # Candidate list and trust gate are identical in 40_completion.bash and
 # 40_completion.zsh — they must stay identical.
@@ -75,18 +85,79 @@ _dotfiles_mise() {
 	done
 	return 1
 }
+# --- lazy, cached completions (DR-041) -------------------------------------
+# `complete -F _df_lazy_comp <tool>` stays registered until a TAB needs it. The
+# stub then sources the cached blob — which replaces its own registration with
+# the real completer — and dispatches to that completer, so the TAB that paid
+# for the load still completes.
+_df_lazy_comp() {
+	local _dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/completions" _reg _fn
+	[ -r "$_dir/$1.bash" ] || return 0
+	# shellcheck source=/dev/null
+	. "$_dir/$1.bash"
+	_reg=$(complete -p "$1" 2>/dev/null) || return 0
+	_fn=${_reg##*-F }
+	_fn=${_fn%% *}
+	[ "$_fn" = _df_lazy_comp ] && return 0
+	"$_fn" "$@"
+}
+
+_df_cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/completions"
+_df_refresh=0
+if command -v df_due >/dev/null 2>&1; then
+	df_startup
+	df_due completions && _df_refresh=1
+fi
+[ -d "$_df_cache" ] || mkdir -p -- "$_df_cache"
 
 mise_bin="$(_dotfiles_mise)"
 [ -n "$mise_bin" ] && eval "$($mise_bin activate bash || true)"
 
+# Refresh policy: the run-guard (every N startups or X seconds), a missing blob,
+# or a tool binary newer than its blob. A skipped refresh costs two -e/-nt
+# builtins per tool and nothing else.
 uv_bin="$(_dotfiles_tool uv)"
-[ -n "$uv_bin" ] && eval "$($uv_bin generate-shell-completion bash || true)"
+if [ -n "$uv_bin" ]; then
+	_df_blob="$_df_cache/uv.bash"
+	if [ "$_df_refresh" = 1 ] || [ ! -e "$_df_blob" ] || [ "$uv_bin" -nt "$_df_blob" ]; then
+		if "$uv_bin" generate-shell-completion bash >|"$_df_blob.tmp" 2>/dev/null; then
+			mv -f -- "$_df_blob.tmp" "$_df_blob"
+		else
+			rm -f -- "$_df_blob.tmp"
+		fi
+	fi
+	[ -e "$_df_blob" ] && complete -o bashdefault -o default -o nosort -F _df_lazy_comp uv
+fi
 
 uvx_bin="$(_dotfiles_tool uvx)"
-[ -n "$uvx_bin" ] && eval "$($uvx_bin --generate-shell-completion bash || true)"
+if [ -n "$uvx_bin" ]; then
+	_df_blob="$_df_cache/uvx.bash"
+	if [ "$_df_refresh" = 1 ] || [ ! -e "$_df_blob" ] || [ "$uvx_bin" -nt "$_df_blob" ]; then
+		if "$uvx_bin" --generate-shell-completion bash >|"$_df_blob.tmp" 2>/dev/null; then
+			mv -f -- "$_df_blob.tmp" "$_df_blob"
+		else
+			rm -f -- "$_df_blob.tmp"
+		fi
+	fi
+	[ -e "$_df_blob" ] && complete -o bashdefault -o default -o nosort -F _df_lazy_comp uvx
+fi
 
 kubectl_bin="$(_dotfiles_tool kubectl)"
-[ -n "$kubectl_bin" ] && eval "$($kubectl_bin completion bash || true)"
+if [ -n "$kubectl_bin" ]; then
+	_df_blob="$_df_cache/kubectl.bash"
+	if [ "$_df_refresh" = 1 ] || [ ! -e "$_df_blob" ] || [ "$kubectl_bin" -nt "$_df_blob" ]; then
+		if "$kubectl_bin" completion bash >|"$_df_blob.tmp" 2>/dev/null; then
+			mv -f -- "$_df_blob.tmp" "$_df_blob"
+		else
+			rm -f -- "$_df_blob.tmp"
+		fi
+	fi
+	[ -e "$_df_blob" ] && complete -o bashdefault -o default -o nosort -F _df_lazy_comp kubectl
+fi
 
-unset mise_bin uv_bin uvx_bin kubectl_bin
+if [ "$_df_refresh" = 1 ] && command -v df_stamp >/dev/null 2>&1; then
+	df_stamp completions
+fi
+
+unset _df_cache _df_refresh _df_blob uv_bin uvx_bin kubectl_bin mise_bin
 unset -f _dotfiles_tool _dotfiles_mise

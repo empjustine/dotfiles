@@ -1,4 +1,10 @@
 #!/bin/sh
+# 70_history.sh — REPL history relocation + legacy fold (REQ-3, DR-038).
+#
+# Gate: none — these are env vars every shell wants. Side effects: creates
+# $XDG_STATE_HOME and $XDG_CONFIG_HOME/vim only when missing (a -d pre-check,
+# deliberately self-healing rather than stamp-gated) and folds the legacy
+# ~/.{duckdb,node_repl,sqlite}_history files once.
 
 df_state="${XDG_STATE_HOME:-$HOME/.local/state}"
 df_config="${XDG_CONFIG_HOME:-$HOME/.config}"
