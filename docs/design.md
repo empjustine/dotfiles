@@ -1,3 +1,11 @@
+---
+id: design
+type: architecture-design
+status: active
+title: "Dotfiles — technical design (TDD)"
+parent: index
+references: [goal, system, execution-map, decision-log]
+---
 # Dotfiles — Technical Design (TDD)
 
 This document explains *why the system is built the way it is*: the design
@@ -11,12 +19,12 @@ in [known-issues.md](known-issues.md).
 
 ## 1. Architecture: one entrypoint, one drop-in directory
 
-**Decision:** all real configuration lives in `profile.d/<NN>_name.{sh,bash,zsh,ps1}`;
+**Decision:** all real configuration lives in `profile.d/<NN>_name.{sh,bash,zsh}`;
 the four POSIX rc files (`~/.bash_profile`, `~/.bashrc`, `~/.zprofile`,
 `~/.zshrc`) are byte-identical copies of a single entrypoint, `src-dotfiles.sh`,
-that merely loops over that directory; native PowerShell has its own analog,
-`src-dotfiles.ps1`, wired by a one-line dot-source in `$PROFILE` rather than a
-copy (DR-001, DR-004, DR-015, DR-030).
+which merely loops over that directory (DR-001, DR-004, DR-015; the
+PowerShell analog was pruned with the rest of the native-Windows support,
+DR-038).
 
 - Why a drop-in dir: one deterministic ordering for every shell, and
   trivial entrypoints (DR-001).
@@ -55,6 +63,15 @@ may be deployed to `/etc/profile.d`.
 **Interactive gating** uses `case "$-" in *i*)` — the canonical test — so
 snippets never fire in `ssh host command`, `scp`, or CI (DR-017).
 
+**Why shell-exclusive files must stay shell-exclusive** (DR-040, measured):
+a `.sh` snippet runs under `emulate -L ksh` in zsh (DR-003), so
+shell-generated code cannot live there. Evaluating `uv
+generate-shell-completion zsh` inside that scope produced `bad output format
+specification` once per completion function (its `(( $+functions[…] ))` guard
+becomes `(( 1[…] ))` under `KSH_ARRAYS`), while the completion still
+registered — a silent, delayed breakage. `.sh` = POSIX logic, `.bash`/`.zsh`
+= wiring generated for that shell.
+
 ## 3. Zsh sourcing of POSIX snippets: `emulate -L ksh`
 
 **Decision:** under zsh each `.sh` source is wrapped in a function doing
@@ -88,9 +105,8 @@ re-entry (DR-027).
   panes) are new processes and correctly install their own hooks.
 - **Why the flag is set before the loop:** the loop re-enters this file
   (20_core → /etc/profile → ~/.bashrc), so the guard must already be up.
-- **PowerShell analog:** `$global:DOTFILES_SOURCED`, deliberately a
-  session-local variable, not an env var — same process-locality semantics
-  (DR-030).
+- (The PowerShell analog was removed in DR-038 — there is one entrypoint
+  again.)
 
 ## 5. Tool discovery: ordered allowlist cascades
 
@@ -100,15 +116,14 @@ only from an explicit, ordered allowlist of install locations; an arbitrary
 
 - **Cascade order** (first `-x` match wins). The two discovery loops differ
   slightly (DR-034); neither ever probes a bare `command -v <tool>`:
-  - `_dotfiles_tool` (`40_completion.{bash,zsh}`): mise user shim (full-string
-    default, then `$XDG_DATA_HOME` form) → `%LOCALAPPDATA%` mise shim (`.exe`,
-    Windows-only) → system mise shim (`MISE_SYSTEM_DATA_DIR` form, then
-    full-string default) → brew → scoop shim (`.exe`, Windows-only) →
-    `/usr/bin`.
+  - `_dotfiles_tool` (`40_completion.bash` and `40_completion.zsh`): mise
+    user shim (full-string default, then `$XDG_DATA_HOME` form) → system mise
+    shim (`MISE_SYSTEM_DATA_DIR` form, then full-string default) → brew →
+    `/usr/bin`. **The two files now carry a byte-identical cascade and trust
+    gate** (DR-038) — they had silently diverged before.
   - atuin loop (`70_history.{bash,zsh}`): mise user shim (`$XDG_DATA_HOME`
-    form, then full-string default) → `%LOCALAPPDATA%` mise shim (`.exe`) →
-    system mise shim (env-var form, then full-string default) → brew → scoop
-    shim (`.exe`) → Termux → `/usr/bin`.
+    form, then full-string default) → system mise shim (env-var form, then
+    full-string default) → brew → Termux → `/usr/bin`.
   Literal defaults are listed alongside their env-var forms so the default
   install locations are always searched even when the vars point elsewhere;
   Termux and the system slots are fallback-only.
@@ -116,24 +131,24 @@ only from an explicit, ordered allowlist of install locations; an arbitrary
   selected (`mise ERROR No version is set for shim: atuin`, exit 1). The
   binary must be proven to run before it is trusted; versionless mise shims
   get a one-shot `mise use -g atuin` auto-provision and re-check.
-- **Why mise-shim probes require a resolvable mise** (`40_completion.bash`):
-  shims only work while the mise binary itself is resolvable; otherwise a
-  broken shim would be selected and shadow later candidates (DR-026).
+- **Why mise-shim probes require a resolvable mise** (`40_completion.bash`
+  *and* `40_completion.zsh` — same gate in both since DR-038): shims only
+  work while the mise binary itself is resolvable; otherwise a broken shim
+  would be selected and shadow later candidates (DR-026).
   Resolvable means `command -v mise` *or* a mise binary found by the
   allowlisted `_dotfiles_mise` probe — snippets run before `80_path.sh`, so
   on a fresh login neither PATH nor brew/system mise may exist yet, and
   `_dotfiles_mise` gained the standalone POSIX locations to cover that
   (DR-034).
-- **Why `.exe` is embedded instead of probed as a fallback** (DR-028): the
-  original two-probe fallback paid an extra `-x` stat per candidate on every
-  platform for a branch that only fires on Win32. PE shims have no
-  extensionless twin, so embedding the spelling in the Windows-only
-  candidates is equivalent and cheaper.
+- **Why there are no `.exe`/`scoop`/`%LOCALAPPDATA%` candidates any more**
+  (DR-038, superseding DR-028): native Windows shells are out of scope, so
+  the PE-shim spelling and the Windows data dirs were deleted from every
+  cascade — WSL2 runs Linux binaries and needs none of it.
 
-## 6. PATH policy: three regimes
+## 6. PATH policy: two regimes
 
 **Decision:** PATH handling differs deliberately per regime (DR-014,
-DR-022.2, DR-029, DR-033):
+DR-033; the Win32 append-only regime is gone with DR-038):
 
 1. **POSIX desktops/WSL2 — wholesale reset** to an explicit list (mise
    shims first, then `/usr/local/...`, `/usr/...`) plus a few optional
@@ -141,20 +156,11 @@ DR-022.2, DR-029, DR-033):
    (snap, games, GUI session) are dropped *by design*, including the stock
    per-user dirs (`~/.local/bin`, `~/bin`, `~/.bin`, `~/.shortcuts`) —
    `profile.d/` is the only supported extension point (DR-033).
-2. **Win32 — append-only, never reset.** PATH is owned by Windows
-   (System32, per-user dirs, scoop); a reset would make native executables
-   unreachable. Only existing scoop shim and mise (`%LOCALAPPDATA%\mise`)
-   dirs are appended.
-3. **Cloud shells & Termux — untouched.** The provider pre-builds a correct
+2. **Cloud shells & Termux — untouched.** The provider pre-builds a correct
    PATH ("don't mangle cursed $PATH"); detection is via the cloud bashrc
-   markers resp. the Termux prefix.
-
-**Why XDG vars stay at Unix defaults on Win32** (no remap to
-`%LOCALAPPDATA%`): one set of defaults across platforms keeps behavior
-predictable; the places that actually need Windows dirs probe
-`${LOCALAPPDATA:-…}` / `${SCOOP:-…}` directly (DR-023, DR-024). Caveat: if
-`SCOOP`/`LOCALAPPDATA` are exported Windows-style (`C:\...`), `-x` probes
-rely on msys path conversion; leaving them unset avoids that entirely.
+   markers resp. the Termux prefix — the same markers `20_core.bash` uses to
+   pick which system rc to source. No `uname` call is needed (DR-038 dropped
+   the Win32 branch that made it necessary).
 
 ## 7. Supply-chain moratorium via env vars
 
@@ -181,36 +187,46 @@ Each step exists because of a specific WSL2 quirk (DR-007):
 
 1. **`XDG_RUNTIME_DIR` trailing-slash strip** — WSL2 reports
    `/run/user/1000/` (real Linux: without the slash); the extra `/` would
-   double up in later path joins (fstrim stamp path).
-2. **Throttled `sudo fstrim /`** — the root lives on a grow-only VHDX;
-   the stamp file in `XDG_RUNTIME_DIR` (tmpfs) makes it once-per-boot, on
-   top of systemd timers.
+   double up in later path joins (stamp path). Unconditional: pure string
+   work, no fork, wanted by every shell.
+2. **One per-boot stamp gates everything privileged** —
+   `.dotfiles-wsl-<boot_id>-<uid>` in `XDG_RUNTIME_DIR` (tmpfs) or `/tmp`;
+   `boot_id` keeps a `/tmp` fallback from surviving a reboot. Measured cost
+   per interactive shell without it: 2×`sudo` ≈ 18 ms + 2×`findmnt` ≈ 4 ms
+   ≈ **22 ms of a ~110 ms startup** — pure waste, since none of these steps
+   can drift between boots. It also subsumes the old fstrim-only stamp
+   (same lifetime), so there is one artifact instead of two (DR-038).
 3. **`mount --make-shared /`** — WSL2 defaults `/` to *private* propagation,
    which breaks rootless Podman mounts.
 4. **Bind mount `/` at `/mnt/wsl/$WSL_DISTRO_NAME`** — gives other distros a
    direct path to this filesystem instead of round-tripping through
    Windows (DrvFS/9p).
 5. **gnome-keyring `--components=secrets`** — bootstrap a Secret Service
-   provider so libsecret apps work without a desktop session.
+   provider so libsecret apps work without a desktop session. Inside the
+   interactive gate, started only while `GNOME_KEYRING_CONTROL` is unset.
 
-All steps are interactive-only (`$PS1`) and idempotent; the owner is a
-passwordless sudoer there, which is what makes the `sudo` calls acceptable.
+Everything except step 1 is interactive-only (canonical `case "$-"` guard,
+DR-017 — the old `$PS1` test is gone, DR-038). The owner is a passwordless
+sudoer there, which is what makes the `sudo` calls acceptable.
 
-## 9. PowerShell flow (`src-dotfiles.ps1`, `*.ps1` snippets)
+## 9. Pruned surfaces: native Windows shells (DR-038)
 
-**Decision:** a mirror entrypoint sourcing only `*.ps1` snippets, same
-guard/root-resolution/loop contract (DR-030, DR-031, DR-032).
+**Decision:** Git Bash / MSYS2 / Cygwin and PowerShell are out of scope.
+Deleted: `src-dotfiles.ps1`, `profile.d/{40_completion,60_containers,
+70_history}.ps1`, `profile.d/50_ip.sh`, every `.exe` / `%LOCALAPPDATA%` /
+`$SCOOP` candidate, the Win32 PATH branch in `80_path.sh`, and the Win32
+KUBECONFIG separator.
 
-- Compatibility by construction with 5.1 and 7.x: 3.0+ feature set
-  (`$PSScriptRoot`), `$env:OS -eq 'Windows_NT'` instead of `$IsWindows` so
-  one file serves both generations, ASCII-only (5.1 reads non-BOM as ANSI),
-  `return`-based guard valid under dot-sourcing.
-- Hooks wrap the `Invoke-Expression` of generated init blobs in `try/catch`:
-  a PSReadLine-less host (ISE, bare hosts) must not break the session.
-- KUBECONFIG deltas vs the sh version: sorted by name (deterministic, unlike
-  `find` order) and no trailing separator (kubectl treats empty entries as
-  "no file" either way; the sh version's trailing separator is harmless but
-  noisy).
+- **Why:** a second and third implementation of the same verticals
+  (allowlist cascades, KUBECONFIG, history hooks) that no host in the scope
+  matrix actually exercised, and — worse — copies that had *drifted* from
+  the POSIX ones (the zsh cascade had lost the Windows candidates and the
+  mise-shim trust gate). Pruning made the remaining files symmetric by
+  construction instead of by discipline.
+- **WSL2 is unaffected and still first-class:** it runs Linux binaries and
+  Linux PATHs; nothing in the pruned set ever fired there.
+- **ip.json:** the last shell-startup write to a synced folder is gone; the
+  Termux:Widget task `shortcuts/tasks/ip.sh` is the sole producer.
 
 ## 10. Invariants & gotchas (do-not-break list)
 
@@ -218,16 +234,21 @@ guard/root-resolution/loop contract (DR-030, DR-031, DR-032).
 - `DOTFILES_SOURCED` is never unset or exported (DR-027).
 - `emulate -L ksh` stays inside its function wrapper (DR-003).
 - No tool is ever trusted from an arbitrary `$PATH` lookup (DR-016).
-- The Windows PATH is only ever appended to, and only with existing dirs
-  (DR-022, DR-029).
+- No native-Windows code path is ever re-added (no `.exe`,
+  `%LOCALAPPDATA%`, `scoop`, MSYS/Cygwin branches, `;` list separators) —
+  DR-038.
 - The stock per-user PATH dirs are never re-added by the reset (DR-033).
 - `deploy.sh` only ever copies `src-dotfiles.sh` (plus zsh targets) and the
   `shortcuts/tasks/*.sh` background tasks (Termux-only; DR-036); it does
   not copy `profile.d/` — extending it would risk
   stale copies on previously-provisioned hosts (DR-016).
-- Snippet scratch variables are unset/removed on scope exit (DR-019,
-  DR-034 — including the PowerShell flow).
-- `*.ps1` snippets stay ASCII-only and 5.1-compatible (DR-030).
+- Snippet scratch variables are unset/removed on scope exit (DR-019, DR-034).
+- Work that mutates *world* state (mounts, fstrim, keyring, history merge)
+  is pre-checked or stamp-gated; only in-shell state runs on every shell
+  (DR-038).
+- Every Markdown file here is a node with frontmatter, and `./lint.sh` fails on
+  a broken graph, an unresolved `DR-NNN`, a stale inventory row or a link to a
+  file that no longer exists (DR-042, [spec-standard.md](spec-standard.md)).
 - An empty `~/.kube/config.d` never clobbers an inherited KUBECONFIG
   (DR-034).
 
@@ -237,7 +258,7 @@ guard/root-resolution/loop contract (DR-030, DR-031, DR-032).
   `80_path.sh` is active; the OCI user OCID block in `60_containers.sh` is
   currently commented out. Brittle either way; generalization recipe in
   DR-008.
-- `50_ip.sh` writes to a synced Android folder — accepted, alternative
-  location in DR-009.
+- `shortcuts/tasks/ip.sh` writes to a synced Android folder — accepted,
+  alternative location in DR-009.
 - `PYTHON_HISTORY` wiring is ready but inert until Python ≥ 3.13 is
   standard (`70_history.sh`).

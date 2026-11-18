@@ -1,3 +1,11 @@
+---
+id: decision-log
+type: decision-log
+status: active
+title: "Dotfiles — decision records"
+parent: index
+references: [goal, system, design, execution-map]
+---
 # Dotfiles Decision Records
 
 These are short decision records (ADR-lite) capturing the *surprising*,
@@ -140,6 +148,10 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   - `fstrim` is still somewhat redundant with systemd timers.
   - On **Silverblue** / immutable hosts `sudo` + these mounts behave
     differently and may not persist as expected.
+- **Status note (2026-11-18, DR-038):** all privileged steps now share ONE
+  per-boot stamp (`.dotfiles-wsl-<boot_id>-<uid>`), which subsumes the
+  fstrim-only stamp; the interactive gate is the canonical `case "$-"` test
+  (not `$PS1`) and also covers the keyring.
 
 ## DR-008 | Hardcoded OCI user OCID and Steam Deck volume UUID in tracked files | Accepted (risk accepted) | 2025-12-18
 
@@ -179,6 +191,9 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   is therefore effectively unchanged, so writing to the synced folder is
   **accepted** as low-risk. If it ever matters, writing to `$XDG_STATE_HOME`
   instead keeps the data off any synced/shareable location.
+- **Status note (2026-11-18, DR-038):** the producer changed. `profile.d/50_ip.sh`
+  was deleted; `ip.json` is now written only by the user-initiated Termux:Widget
+  task `shortcuts/tasks/ip.sh`, so no shell startup touches the synced folder.
 
 ## DR-010 | Vendoring `bash-preexec.sh` (third-party, MIT) | Resolved (deleted — see DR-025, DR-037) | 2025-04-22
 
@@ -319,7 +334,6 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   exclusivity `else` split from the TERM check — under zsh with a non-xterm
   TERM it must not print the wrong-shell warning (DR-034).
 
-
 ## DR-018 | Defense-in-depth for shell-exclusive snippets | Accepted (applied) | 2026-07
 
 - **Context:** `profile.d/` mixes POSIX `.sh` snippets (sourced by every shell)
@@ -410,17 +424,7 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   rather than `.sh`; it is interactive-gated and defended by DR-018. atuin
   history (search/stats/sync) is configured separately under DR-016.
 
-## Cross-cutting note for packaging (feeds DR-001/DR-002)
-
-`/etc/profile` on Debian/Fedora loops `/etc/profile.d/*.sh` **under dash**, and
-only for **login** shells. Critically, **Debian's `/etc/zsh/zprofile` does NOT
-source `/etc/profile`** (Fedora/Silverblue's does). So a pure `/etc/profile.d`
-drop-in covers bash/ksh login everywhere and zsh login on Fedora, but **not zsh
-on Debian**, and **never non-login interactive shells**. Any packaging plan must
-therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
-`/etc/profile.d` is a bonus for login shells, not a complete replacement.
-
-## DR-022 | Git Bash / MSYS2 (Win32) coverage: `.exe` shims, Windows-owned PATH | Accepted (applied) | 2026-07
+## DR-022 | Git Bash / MSYS2 (Win32) coverage: `.exe` shims, Windows-owned PATH | Withdrawn (DR-038) | 2026-07
 
 > Part 1 (`.exe` fallback) superseded by DR-028 — the fallback was simplified
 > to embedding the `.exe` spelling in the Windows-only candidates.
@@ -465,7 +469,17 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   (`C:\...`), the `-x` probes assume msys path conversion; leaving them
   unset (the default) avoids that entirely.
 
-## DR-023 | Win32 artifact resolution: mise's Windows data dir (`%LOCALAPPDATA%\mise`) | Accepted (applied) | 2026-07
+## Cross-cutting note for packaging (feeds DR-001/DR-002)
+
+`/etc/profile` on Debian/Fedora loops `/etc/profile.d/*.sh` **under dash**, and
+only for **login** shells. Critically, **Debian's `/etc/zsh/zprofile` does NOT
+source `/etc/profile`** (Fedora/Silverblue's does). So a pure `/etc/profile.d`
+drop-in covers bash/ksh login everywhere and zsh login on Fedora, but **not zsh
+on Debian**, and **never non-login interactive shells**. Any packaging plan must
+therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
+`/etc/profile.d` is a bonus for login shells, not a complete replacement.
+
+## DR-023 | Win32 artifact resolution: mise's Windows data dir (`%LOCALAPPDATA%\mise`) | Withdrawn (DR-038) | 2026-07
 
 - **Context:** Scoop shims only cover scoop-installed apps. Tools installed via
   mise (`mise use -g atuin`) get their shims in mise's own data dir, which on
@@ -493,7 +507,7 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   rely on msys path conversion; leaving them unset gives POSIX paths
   (`$HOME/AppData/Local`).
 
-## DR-024 | XDG_* vars stay at Unix-y defaults on Win32 (no remap) | Accepted (applied) | 2026-07
+## DR-024 | XDG_* vars stay at Unix-y defaults on Win32 (no remap) | Withdrawn (DR-038) | 2026-07
 
 - **Context:** Windows keeps per-user data dirs in `%LOCALAPPDATA%`/`%APPDATA%`,
   and tools like mise use those instead of `XDG_DATA_HOME`. Remapping `XDG_*`
@@ -563,6 +577,9 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
 - **Consequences:** A mise shim is never selected (or executed) while its mise
   binary is unreachable; the cascade falls through to scoop/system candidates.
   POSIX behavior unchanged (mise is on PATH whenever its shims exist and work).
+  **Status note (2026-11-18, DR-038):** the gate now also lives in
+  `40_completion.zsh`, which had silently never had it; the two cascades are
+  byte-identical.
   The pre-existing POSIX PATH reset in `80_path.sh` still prepends mise shim
   dirs unconditionally — harmless there since the dirs only exist after mise has
   run; a stale-shims-after-uninstall case would be caught by the same probes
@@ -574,32 +591,6 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   completions. The gate now also accepts a mise binary found by the
   allowlisted `_dotfiles_mise` probe (which gained the standalone POSIX
   locations `~/.local/bin/mise` and `$XDG_DATA_HOME/mise/bin/mise`).
-
-## DR-028 | Win32 `.exe` spelling embedded in Windows-only candidates | Accepted (applied) | 2026-07
-
-- **Context:** DR-022.1's `.exe` fallback probed every candidate twice
-  (`[ -x "$cand" ]` then `[ -x "$cand.exe" ]`) in the atuin allowlist
-  (`70_history.{bash,zsh}`) and the completion cascade
-  (`40_completion.bash`). Most platforms are not Git Bash, so each probe
-  paid an extra `-x` stat per candidate for a fallback that only ever fires
-  on Win32 — and only for the Windows-only path prefixes.
-- **Decision:** Drop the fallback branches entirely. The Windows-only
-  candidates now embed the `.exe` spelling directly in the candidate list:
-  `"${LOCALAPPDATA:-$HOME/AppData/Local}/mise/shims/<tool>.exe"`,
-  `"${LOCALAPPDATA:-$HOME/AppData/Local}/mise/bin/mise.exe"`, and
-  `"${SCOOP:-$HOME/scoop}/shims/<tool>.exe"`. All POSIX candidates
-  (`$XDG_DATA_HOME`/`$HOME/.local`/`MISE_SYSTEM_DATA_DIR`/linuxbrew/`/usr/bin`)
-  stay extensionless. Every probe is again a single `[ -x ]` (DR-016's
-  allowlist shape).
-- **Consequences:** On POSIX nothing changes — the Windows-only paths are
-  inert, `.exe`-suffixed or not. On Win32, mise and scoop shims are PE
-  binaries (`atuin.exe`, `mise.exe`, …) so the `.exe` spelling is the only
-  correct one; there is no extensionless twin that the old fallback could
-  have found that the new spelling misses. Case patterns keyed on the
-  `*/mise/shims/*` shape (the DR-026 gate in `_dotfiles_tool`, the
-  auto-provision branch in `70_history`) match both `atuin` and `atuin.exe`,
-  so they are unaffected. Removes one `-x` stat per candidate per shell on
-  every platform (DR-022's documented cost).
 
 ## DR-027 | Termux startup chain: idempotency guard in src-dotfiles.sh | Accepted (applied) | 2026-07
 
@@ -625,7 +616,33 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   re-entry hop, so snippet side effects (PATH, eval'd `atuin init`, …) happen
   exactly once per shell.
 
-## DR-029 | Win32 PATH gains mise's Windows dirs (bin + shims) | Accepted (applied) | 2026-07
+## DR-028 | Win32 `.exe` spelling embedded in Windows-only candidates | Withdrawn (DR-038) | 2026-07
+
+- **Context:** DR-022.1's `.exe` fallback probed every candidate twice
+  (`[ -x "$cand" ]` then `[ -x "$cand.exe" ]`) in the atuin allowlist
+  (`70_history.{bash,zsh}`) and the completion cascade
+  (`40_completion.bash`). Most platforms are not Git Bash, so each probe
+  paid an extra `-x` stat per candidate for a fallback that only ever fires
+  on Win32 — and only for the Windows-only path prefixes.
+- **Decision:** Drop the fallback branches entirely. The Windows-only
+  candidates now embed the `.exe` spelling directly in the candidate list:
+  `"${LOCALAPPDATA:-$HOME/AppData/Local}/mise/shims/<tool>.exe"`,
+  `"${LOCALAPPDATA:-$HOME/AppData/Local}/mise/bin/mise.exe"`, and
+  `"${SCOOP:-$HOME/scoop}/shims/<tool>.exe"`. All POSIX candidates
+  (`$XDG_DATA_HOME`/`$HOME/.local`/`MISE_SYSTEM_DATA_DIR`/linuxbrew/`/usr/bin`)
+  stay extensionless. Every probe is again a single `[ -x ]` (DR-016's
+  allowlist shape).
+- **Consequences:** On POSIX nothing changes — the Windows-only paths are
+  inert, `.exe`-suffixed or not. On Win32, mise and scoop shims are PE
+  binaries (`atuin.exe`, `mise.exe`, …) so the `.exe` spelling is the only
+  correct one; there is no extensionless twin that the old fallback could
+  have found that the new spelling misses. Case patterns keyed on the
+  `*/mise/shims/*` shape (the DR-026 gate in `_dotfiles_tool`, the
+  auto-provision branch in `70_history`) match both `atuin` and `atuin.exe`,
+  so they are unaffected. Removes one `-x` stat per candidate per shell on
+  every platform (DR-022's documented cost).
+
+## DR-029 | Win32 PATH gains mise's Windows dirs (bin + shims) | Withdrawn (DR-038) | 2026-07
 
 - **Context:** The `80_path.sh` Win32 branch appended only scoop's shim dir
   (DR-022.2), on the theory that Windows PATH is owned by Windows. But mise on
@@ -644,7 +661,7 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   nothing becomes unreachable. Mirrors the POSIX branch's mise-shims-on-PATH
   behavior (DR-014) without its wholesale reset.
 
-## DR-030 | PowerShell entrypoint: src-dotfiles.ps1 + profile.d/*.ps1 | Accepted (applied) | 2026-07
+## DR-030 | PowerShell entrypoint: src-dotfiles.ps1 + profile.d/*.ps1 | Withdrawn (DR-038) | 2026-07
 
 - **Context:** The bash/zsh flows cover Git Bash, MSYS2 and Termux, but a
   native PowerShell session (5.1 "Windows PowerShell" or 7.x Core) has no
@@ -673,7 +690,7 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   snippets yet means an empty loop). Not verified against a real 5.1 host in
   CI — compatibility is by construction (feature set used is 3.0+).
 
-## DR-031 | PowerShell kubectl completion: profile.d/40_completion.ps1 | Accepted (applied) | 2026-07
+## DR-031 | PowerShell kubectl completion: profile.d/40_completion.ps1 | Withdrawn (DR-038) | 2026-07
 
 - **Context:** The PowerShell flow (DR-030) shipped with only the atuin hook.
   kubectl needs the same treatment on native PowerShell: roughly
@@ -693,6 +710,25 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   scoop- and mise-managed installs, without trusting an arbitrary `kubectl`
   from `$PATH` (winget/choco installs are out of scope — add a candidate if
   you use one). The bash/zsh sides are unchanged.
+
+## DR-032 | Dynamic KUBECONFIG in PowerShell: profile.d/60_containers.ps1 | Withdrawn (sh rule kept, DR-038) | 2026-07
+
+- **Context:** `60_containers.sh` builds KUBECONFIG from
+  `$HOME/.kube/config.d` and already handles the Win32 list separator (`;`
+  for native kubectl.exe, `:` elsewhere). Native PowerShell had no equivalent.
+- **Decision:** Add `profile.d/60_containers.ps1` with the same rule: if
+  `$HOME\.kube\config.d` exists (container check), `$env:KUBECONFIG` is the
+  list of its files joined by `;` on Windows_NT, `:` otherwise; never unset or
+  clobbered when the directory is missing. Two deliberate deltas from the sh
+  version, documented in the file: the list is `Sort-Object Name`-sorted
+  (deterministic, unlike `find`'s directory-entry order) and has no trailing
+  separator (kubectl treats empty entries as "no file" either way — the sh
+  version's trailing separator is harmless but noisy). `$HOME` (the automatic
+  variable) is used instead of `$env:USERPROFILE` so the snippet is
+  cross-platform like its sh counterpart.
+- **Consequences:** Git Bash and native PowerShell produce the same KUBECONFIG
+  set from the same config.d; order is now deterministic on both flows
+  (sh side remains as-is). No other behavior change.
 
 ## DR-033 | Stock per-user extension points intentionally not honored (`~/.bashrc.d`, `~/.local/bin`, `~/bin`, `~/.bin`, `~/.shortcuts`) | Accepted (applied) | 2026-08
 
@@ -725,25 +761,6 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   (Silverblue, WSL2, Debian, …). On Termux and cloud shells the reset is
   skipped, so nothing is dropped there. This is a deliberate trade for one
   predictable extension point and one predictable PATH.
-
-## DR-032 | Dynamic KUBECONFIG in PowerShell: profile.d/60_containers.ps1 | Accepted (applied) | 2026-07
-
-- **Context:** `60_containers.sh` builds KUBECONFIG from
-  `$HOME/.kube/config.d` and already handles the Win32 list separator (`;`
-  for native kubectl.exe, `:` elsewhere). Native PowerShell had no equivalent.
-- **Decision:** Add `profile.d/60_containers.ps1` with the same rule: if
-  `$HOME\.kube\config.d` exists (container check), `$env:KUBECONFIG` is the
-  list of its files joined by `;` on Windows_NT, `:` otherwise; never unset or
-  clobbered when the directory is missing. Two deliberate deltas from the sh
-  version, documented in the file: the list is `Sort-Object Name`-sorted
-  (deterministic, unlike `find`'s directory-entry order) and has no trailing
-  separator (kubectl treats empty entries as "no file" either way — the sh
-  version's trailing separator is harmless but noisy). `$HOME` (the automatic
-  variable) is used instead of `$env:USERPROFILE` so the snippet is
-  cross-platform like its sh counterpart.
-- **Consequences:** Git Bash and native PowerShell produce the same KUBECONFIG
-  set from the same config.d; order is now deterministic on both flows
-  (sh side remains as-is). No other behavior change.
 
 ## DR-034 | Consistency fix batch: history leak, completion gating, lint, PS hygiene | Accepted (applied) | 2026-09-17
 
@@ -868,5 +885,178 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   V0.7.0 instead of a stale external copy. The 18.18 floor is now a hard
   requirement for the atuin path (already true in every supported environment);
   anyone on an older atuin gets `atuin init bash`'s legacy fallback (or should
-  upgrade). Docs (§7 SRD atuin wiring, §5 TDD tool-discovery, README credits,
-  REQ-2/REQ-7 scope) were updated to remove the vendored-file mentions.
+  upgrade). Docs (`docs/system.md` §7 atuin wiring, `docs/design.md` §5
+  tool-discovery, README credits, REQ-2/REQ-7 scope) were updated to remove
+  the vendored-file mentions.
+
+## DR-038 | Prune native-Windows support; one caching/trottling story; gating + startup-cost batch | Accepted (applied) | 2026-11-18
+
+- **Context:** An audit of the whole startup system found (a) *asymmetry* —
+  four near-copies of the allowlist cascade that had silently **diverged**
+  (the zsh cascade had lost every Windows candidate and the DR-026
+  mise-shim trust gate), plus a PowerShell flow that wired only kubectl
+  where bash/zsh wired five things; (b) *cost* — an interactive bash login
+  measured **106–114 ms** against a 3 ms bare-shell baseline, of which
+  ~22 ms was privileged WSL2 work repeated on every interactive shell and
+  ~85 ms was three tool-generated completion blobs; (c) *scope drift* — a
+  supported-environment matrix with Git Bash/MSYS2/Cygwin and two
+  PowerShell generations, none of it exercised by the owner, all of it
+  duplicated per shell.
+- **Decision:**
+  1. **Native Windows shells are out of scope.** Deleted
+     `src-dotfiles.ps1`, `profile.d/{40_completion,60_containers,
+     70_history}.ps1`, every `.exe` candidate, every `%LOCALAPPDATA%` /
+     `scoop` candidate, the Win32 PATH branch in `80_path.sh` (and with it
+     the only `uname` call), and the Win32 `;` KUBECONFIG separator.
+     DR-022/023/024/028/029/030/031/032 are withdrawn. **WSL2 is
+     unaffected** — it is a Linux guest and still first-class.
+  2. **The mise-shim trust gate (DR-026) now exists in both completion
+     snippets.** `40_completion.bash` and `40_completion.zsh` carry a
+     byte-identical cascade + gate; `kubectl` is wired with
+     `eval "$(…)"` in both (no process substitution, one less bashism).
+  3. **One interactivity test.** `10_wsl2.sh` moved from `$PS1` to the
+     canonical `case "$-"` guard (completing DR-017); the gate now covers
+     the keyring bootstrap too, and everything privileged sits inside it.
+  4. **One per-boot stamp for the whole WSL2 privileged block** —
+     `.dotfiles-wsl-<boot_id>-<uid>` in `XDG_RUNTIME_DIR` (or `/tmp`;
+     `boot_id` keeps a `/tmp` fallback from surviving a reboot). It
+     subsumes the old fstrim-only stamp (one artifact instead of two) and
+     removes ~22 ms of `sudo`/`findmnt` forks per interactive shell:
+     measured 2×`sudo` ≈ 9 ms each, 2×`findmnt` ≈ 2 ms each.
+  5. **`70_history.sh` no longer forks `mkdir` every shell** — two
+     in-shell `-d` tests instead (≈1.5 ms saved, and still self-healing;
+     no throttle stamp, which would have stopped repairing a deleted dir).
+  6. **`50_ip.sh` is deleted.** `ip.json` is written only by the
+     Termux:Widget background task `shortcuts/tasks/ip.sh` (DR-036), so no
+     shell startup writes to synced storage any more (DR-009 unchanged as a
+     risk statement; DR-034's interactive guard for that snippet is moot).
+- **Consequences:** line count and shell-specific surface both shrink
+  (five snippets and one entrypoint deleted; the two cascade copies are now
+  provably identical — but they are deliberately **not** merged, see DR-040). Startup is measurably cheaper on WSL2 and slightly
+  cheaper elsewhere. Cost: native Windows users lose support entirely —
+  WSL2 is the supported path there; and the WSL2 privileged self-repair
+  window widens from "every interactive shell" to "once per boot", which is
+  the right granularity for mounts/tmpfs ownership that cannot drift
+  between boots. The remaining (b)/(c) findings from the audit — cascades
+  duplicated between bash and zsh, `70_moratorium.sh` muxing policy areas,
+  platform detection repeated in three files, kubectl split between
+  `40_completion.*` and `60_containers.sh` — are deliberately deferred, not
+  forgotten. Hoisting the per-file shell/interactivity gates into
+  `src-dotfiles.sh` via a filename convention is *researched only*; see
+  [docs/execution-map.md](docs/execution-map.md).
+
+## DR-039 | Hoist per-snippet shell/interactivity gates into `src-dotfiles.sh` via a filename convention | Proposed | 2026-11-18
+
+- **Context:** after DR-038 the gating boilerplate is 6 `case "$-" in *i*)`
+  blocks and 6 shell-exclusivity blocks (3 file pairs) spread over 9 snippets,
+  each of which therefore starts with plumbing instead of content. The
+  entrypoint already filters by extension, so it is the natural single
+  gatekeeper.
+- **Proposal:** name-encode the gate — `NN_name.int.sh` / `.int.bash` /
+  `.int.zsh` — and let `src-dotfiles.sh` decide, from `$-` and
+  `$BASH_VERSION`/`$ZSH_VERSION`, whether to source a file at all. Keep one
+  `df_wrong_shell` helper for the manual-sourcing case. Alternatives assessed
+  and dismissed: directory split (`profile.d/always/` + `profile.d/interactive/`
+  breaks the single numeric ordering that is DR-001's whole scheme); header
+  manifest (a `read`/`case` per file per shell *and* still per-file
+  boilerplate). Full analysis and trade-offs:
+  [docs/execution-map.md](docs/execution-map.md) §8.
+- **Consequences if applied:** ~25 lines of boilerplate gone, one place to
+  change gate semantics, and the interactive set becomes greppable
+  (`ls profile.d/*.int.*`). Cost: DR-018's second defence layer disappears
+  (a manually sourced file runs ungated) and NFR-4 must be amended; `lint.sh`
+  needs no change (`*.int.sh` still ends in `.sh`). **Not applied:** the gates
+  cost nothing measurable at runtime, so the only argument is authoring
+  hygiene, and the risk lands exactly on the defence-in-depth edge.
+
+## DR-040 | Keep bash and zsh snippets separate — no merge into `.sh` | Accepted (merge rejected) | 2026-11-18
+
+- **Context:** DR-038 made `40_completion.{bash,zsh}` and
+  `70_history.{bash,zsh}` byte-identical apart from the framework block and the
+  shell word in the generated blob, which made a merge into a single `.sh`
+  snippet look mechanical (and it was proposed as such).
+- **Decision:** do not merge. `.sh` = POSIX-only logic; `.bash`/`.zsh` =
+  shell-generated wiring (`compinit`/`bindkey`, `eval "$(<tool> init|activate
+  <shell>)"`). Any future merge must first pass the probe in
+  [docs/execution-map.md](docs/execution-map.md) §9.
+- **Evidence (measured 2026-11-18, zsh 5.9):** a `.sh` snippet is sourced under
+  `emulate -L ksh` in zsh (DR-003). Evaluating `uv generate-shell-completion
+  zsh` inside that scope emits `bad output format specification` once per
+  completion function — the blob guards itself with
+  `(( $+functions[_uv_commands] ))`, and `KSH_ARRAYS` turns `$+functions[x]`
+  into `${+functions}` plus a literal `[x]` (`(( 1[x] ))`). The completion still
+  registers via `compdef`, so the breakage is silent until tab completion is
+  used. The same class of failure applies to `atuin init zsh` and
+  `mise activate zsh`.
+- **Second reason:** the two history paths are not equivalent. Bash has no
+  native `preexec`, so atuin's bash integration installs `PROMPT_COMMAND`/
+  preexec machinery, while zsh has native `precmd`/`preexec`. The bash path is
+  the degraded one on the real host (open issue: random history loss,
+  documented in [docs/execution-map.md](docs/execution-map.md) §10) — a merged
+  body would conflate a working and a broken path.
+- **Consequences:** the duplicate *cascades* remain duplicated. The shareable
+  part is the pure discovery cascade (a POSIX function), which depends on the
+  deferred helper-lib decision (b/c) and does not require a merge.
+
+## DR-041 | zsh completions via `$fpath` autoload + throttled refresh; bash via a cached blob | Proposed | 2026-11-18
+
+- **Context:** after DR-038 the startup budget is dominated by generated
+completion blobs. Measured 2026-11-18: bash chain 106–114 ms (bare 3 ms),
+zsh chain **196 ms** (bare 8 ms); on zsh `eval "$(uv
+generate-shell-completion zsh)"` alone is 103 ms, of which ~85 ms is the
+eval — the spawn is the smaller half.
+- **Proposal:** zsh — write the generated `#compdef` files once into
+  `$XDG_DATA_HOME/zsh/site-functions/` and let `compinit` autoload them on
+  first completion (measured: 25 ms, identical to bare `compinit`, with
+  `_comps[uv]=_uv` verified). Refresh that directory behind the run-guard the
+  task asked for at the start of this work — at most once per T *or* every N
+  startups, invalidated by binary mtime/version. bash — no lazy autoload
+  exists, so keep `eval` and optionally source a cached blob file (removes the
+  spawn, keeps the parse).
+- **Consequences if applied:** ~150 ms off an interactive zsh startup and
+  ~35–40 ms off bash, with completions still available on first TAB (later
+  instead of eagerly). Cost: a cache directory and an invalidation rule to
+  get right, and completion changes made by a tool upgrade become visible on
+  the next refresh rather than immediately. Deferred: it is the first item to
+  pick up after (b)/(c).
+
+## DR-042 | Adopt an adapted spec-graph contract and a documentation gate | Accepted (applied) | 2026-11-18
+
+- **Context:** the doc set (BRD / SRD / TDD / execution map / known-issues /
+  decision log) is a set of hand-maintained views over one system, and every
+  prune leaves the same debris: an inventory row for a deleted file, a citation
+  to a record that moved, a path named in a requirement that no longer exists.
+  DR-038's prune produced exactly that, and it was found by reading, not by a
+  check. The owner's `agentcontainer` repository solves the same problem with a
+  spec-graph standard plus a mechanical gate; this record is the assessment of
+  whether to bring it here, and the answer: yes, reduced.
+- **Decision:**
+  1. **Adopt the mechanism, not the whole standard.** Every Markdown file here
+     is a node with frontmatter (`id`, `type`, `status`, `title`, `parent`,
+     `references`); five types (`index`, `goal-and-requirements`,
+     `architecture-design`, `decision-log`, `working-list`) and the five
+     lifecycle words. Contract in [docs/spec-standard.md](docs/spec-standard.md).
+  2. **One gate, no new dependencies** — [docs/spec-check.mjs](docs/spec-check.mjs),
+     node-only, exit 0/1/2, findings as `path[:line]: [code] sentence`, run as
+     the last leg of `./lint.sh` (and fatal if node is missing, so the leg
+     cannot silently disappear).
+  3. **Repo-specific checks carry the value:** the component inventory vs the
+     files that exist, every `DR-NNN` citation vs the log, the log's own record
+     shape/numbering/status vocabulary, relative links and `#anchor`s, `§N`
+     section citations, and "every document opens with what it is".
+  4. **Dropped deliberately:** module/submodule nesting (this tree has no
+     module folders), the vendored-spec and `.agents/` exemptions, `covers`,
+     task specs, the archive rules, and the vendored writing guides.
+- **Drift the first run found, all fixed here:** DR-027 was filed after DR-028
+  and DR-032 after DR-033 (the log is append-only; both blocks moved), DR-033
+  and DR-037 cited sections by prose name instead of path (now
+  `docs/requirements.md` §2.1, `docs/system.md` §3/§7, `docs/design.md` §5),
+  `docs/system.md` had lost the `70_history.sh` inventory row, and
+  `docs/requirements.md` still named a file that DR-038 deleted.
+- **Consequences:** doc drift now fails `./lint.sh` instead of surviving
+  review, and the README became what DR-035 always claimed it was — an index
+  with links, not a second copy of the install instructions. Cost: one more
+  frontmatter block per document, node required for the lint leg, and a class of
+  edits that previously passed silently now fail (by design). What the gate
+  cannot judge — whether a `status` is honest, whether a claim is still true —
+  stays reading work; `docs/known-issues.md` is where a reader records it.

@@ -1,3 +1,11 @@
+---
+id: known-issues
+type: working-list
+status: active
+title: "Dotfiles — known documentation issues"
+parent: index
+references: [goal, system, design, execution-map, decision-log]
+---
 # Dotfiles — Known Documentation Issues
 
 This file tracks known inconsistencies, gaps and drift in the documentation

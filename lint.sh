@@ -17,6 +17,18 @@ if command -v zsh >/dev/null 2>&1; then
 		zsh -n "$zsh_snippet" >>report.txt 2>&1 || status=1
 	done
 	unset zsh_snippet
+else
+	printf '%s\n' "spec-check: zsh -n skipped (zsh not found)" >>report.txt
+fi
+
+# Documentation gate (DR-042, docs/spec-standard.md): frontmatter graph, DR
+# citations, links/anchors, § cites, inventory vs tree. Mandatory — a missing
+# node makes the leg fail rather than silently vanish.
+if command -v node >/dev/null 2>&1; then
+	node "${DOTFILES:-$HOME/dotfiles}/docs/spec-check.mjs" "${DOTFILES:-$HOME/dotfiles}" >>report.txt 2>&1 || status=1
+else
+	printf '%s\n' "spec-check: skipped — node not found (the docs gate is mandatory)" >>report.txt
+	status=1
 fi
 
 date +%F >>report.txt

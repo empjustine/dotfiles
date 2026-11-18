@@ -1,14 +1,37 @@
+---
+id: index
+type: index
+status: active
+title: "dotfiles — index"
+references: [goal, system, design, execution-map, decision-log, known-issues]
+---
+
 # dotfiles
 
-Known login flows:
+One predictable shell environment for one owner across every host and shell
+that matters: POSIX desktops, WSL2, Termux, cloud shells. Four rc files that are
+copies of one POSIX entrypoint, one drop-in directory (`profile.d/`) behind it,
+and a documentation set that is checked mechanically. Native Windows shells are
+out of scope (DR-038) — WSL2 is the supported way to run this on a Windows host.
 
-/etc/zshenv → ~/.zshenv → ~/.zprofile → ~/.zshrc → ~/.zlogin → ~/.zlogout
+This file is an index, not a content home (DR-035).
 
-~/.bash_profile → login
+## Documents
 
-~/.bashrc → non login
+| document | the question it answers |
+| --- | --- |
+| [requirements.md](docs/requirements.md) | what the environment must do, and where (BRD) |
+| [system.md](docs/system.md) | how it works: components, startup chains, the `profile.d/` contract (SRD) |
+| [design.md](docs/design.md) | why it is built this way, grouped by decision |
+| [execution-map.md](docs/execution-map.md) | what is expected to run, where, in what order, at what cost |
+| [DECISIONS.md](DECISIONS.md) | the dated decision log — the single source for every DR-### cite |
+| [known-issues.md](docs/known-issues.md) | documentation drift that is known and not yet fixed |
+| [spec-standard.md](docs/spec-standard.md) | the frontmatter contract over these files, and the gate that enforces it |
 
-## install
+## Use
+
+Install — this is what `deploy.sh` automates (it also scaffolds the Termux:Widget
+directories and copies the background tasks on Termux):
 
 ```sh
 for target in ~/.bash_profile ~/.bashrc "${ZDOTDIR:-$HOME}/.zprofile" "${ZDOTDIR:-$HOME}/.zshrc"; do
@@ -16,12 +39,15 @@ for target in ~/.bash_profile ~/.bashrc "${ZDOTDIR:-$HOME}/.zprofile" "${ZDOTDIR
 done
 ```
 
-# lint
+Lint — shell formatting and analysis plus the documentation gate:
 
 ```sh
-find "${DOTFILES:-$HOME/dotfiles}" -name '*sh' -type f -exec shfmt --write --indent 0 --binary-next-line --case-indent -- '{}' '+'
-find "${DOTFILES:-$HOME/dotfiles}" -name '*sh' -type f -exec shellcheck --check-sourced --external-sources --severity=style --enable=all --exclude=SC2250,SC2292 '{}' '+'
+./lint.sh
 ```
+
+It truncates `report.txt` per run and exits non-zero on any finding: shfmt and
+shellcheck over `*.sh`/`*.bash`, `zsh -n` over `*.zsh`, and
+`node docs/spec-check.mjs` over the Markdown.
 
 ## credits
 

@@ -8,29 +8,55 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
 	# /run/user/1000/
 	XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR%/}"
 
-	# Only do privileged setup in interactive shells; skip non-interactive
-	# (ssh host command, scp, CI) where sudo may hang or be pointless.
-	if [ -n "$PS1" ]; then
-		# fstrim is heavy and already handled by systemd timers: throttle to
-		# once per boot via a stamp in XDG_RUNTIME_DIR.
-		fstrim_stamp="${XDG_RUNTIME_DIR:-/tmp}/.dotfiles-fstrim-$(id -u)"
-		if [ ! -e "$fstrim_stamp" ]; then
-			sudo fstrim / 2>/dev/null
-			: >"$fstrim_stamp"
-		fi
+	# Interactive-only, canonical guard (DR-017: `$-` carries `i`). Covers
+	# the keyring too: no non-interactive session (ssh host cmd, scp, CI)
+	# needs a Secret Service provider, and every step below can fork sudo.
+	case "$-" in
+		*i*) ;;
+		*) return 0 ;;
+	esac
 
+	# Everything privileged is gated by ONE per-boot stamp. The steps are
+	# idempotent probes, but each one forks (sudo ~9ms, findmnt ~2ms) and
+	# there is nothing to repair between boots — so per boot is the right
+	# granularity, not per interactive shell (DR-038). boot_id in the name
+	# keeps a /tmp fallback from looking like this boot's stamp. The stamp
+	# subsumes the old standalone fstrim stamp: same lifetime.
+	# uid/gid once: these feed the stamp name and both privileged calls, and
+	# command substitution inside an argument makes the exit status opaque
+	# (shellcheck SC2312).
+	df_uid="$(id -u)"
+	df_gid="$(id -g)"
+	read -r df_boot_id </proc/sys/kernel/random/boot_id || df_boot_id=na
+	df_boot_stamp="${XDG_RUNTIME_DIR:-/tmp}/.dotfiles-wsl-${df_boot_id}-${df_uid}"
+	if [ ! -e "$df_boot_stamp" ]; then
+		sudo mkdir -p -- "/run/user/$df_uid" "$XDG_RUNTIME_DIR"
+		sudo chown "$df_uid:$df_gid" -- "/run/user/$df_uid" "$XDG_RUNTIME_DIR"
+
+		# fstrim is heavy and already handled by systemd timers: once per boot
+		# just tops it up.
+		sudo fstrim / 2>/dev/null
+
+		# Rootless Podman needs a shared root propagation mount.
 		if [ "$(findmnt --noheadings -o PROPAGATION / || true)" = "private" ]; then
 			sudo mount --make-shared /
 		fi
 
-		wsl2_mountpoint="/mnt/wsl/${WSL_DISTRO_NAME}"
-		if ! findmnt --mountpoint="$wsl2_mountpoint" >/dev/null; then
-			mkdir -p -- "$wsl2_mountpoint"
-			sudo mount --bind / "$wsl2_mountpoint"
+		# Bind / into WSL2's shared /mnt/wsl namespace so other distros reach
+		# this filesystem directly instead of round-tripping via DrvFS/9p.
+		df_wsl_mountpoint="/mnt/wsl/${WSL_DISTRO_NAME}"
+		if ! findmnt --mountpoint="$df_wsl_mountpoint" >/dev/null; then
+			mkdir -p -- "$df_wsl_mountpoint"
+			sudo mount --bind / "$df_wsl_mountpoint"
 		fi
-		unset wsl2_mountpoint fstrim_stamp
+		unset df_wsl_mountpoint
+		: >"$df_boot_stamp"
 	fi
+	unset df_uid df_gid df_boot_id df_boot_stamp
 
+	# Bootstrap a Secret Service (libsecret) provider without a desktop
+	# session. Started only once per session (the env it prints is what
+	# later shells need) and only when nothing is running.
 	if [ -x /usr/bin/gnome-keyring-daemon ] && [ -z "$GNOME_KEYRING_CONTROL" ]; then
 		gnome_env="$(/usr/bin/gnome-keyring-daemon --start --components=secrets 2>/dev/null)"
 		if [ -n "$gnome_env" ]; then

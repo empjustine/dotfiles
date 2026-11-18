@@ -18,22 +18,18 @@ mise_attempted=""
 for cand in \
 	"${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims/atuin" \
 	"$HOME/.local/share/mise/shims/atuin" \
-	"${LOCALAPPDATA:-$HOME/AppData/Local}/mise/shims/atuin.exe" \
 	"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims/atuin" \
 	/usr/local/share/mise/shims/atuin \
 	/home/linuxbrew/.linuxbrew/bin/atuin \
-	"${SCOOP:-$HOME/scoop}/shims/atuin.exe" \
 	/data/data/com.termux/files/usr/bin/atuin \
 	/usr/bin/atuin; do
-	# Windows-only candidates embed `.exe` directly: PE shims have
-	# no extensionless twin, so one `-x` probe suffices (DR-028).
 	[ -x "$cand" ] || continue
 	# A mise shim can exist yet have no version selected
 	# (`mise ERROR No version is set for shim: atuin`, exit 1).
 	# Verify the binary actually runs before trusting it.
 	if ! "$cand" --version >/dev/null 2>&1; then
 		case "$cand" in
-			*/mise/shims/atuin*)
+			*/mise/shims/atuin)
 				if [ -z "$mise_attempted" ] && command -v mise >/dev/null 2>&1; then
 					mise use -g atuin >/dev/null 2>&1
 					mise_attempted=1

@@ -24,8 +24,8 @@ for target in "$HOME/.bash_profile" "$HOME/.bashrc"; do
 	cp "${DOTFILES:-$HOME/dotfiles}/src-dotfiles.sh" "$target"
 done
 
-# Deploy the zsh entrypoints only when zsh exists; on Git Bash / MSYS2 the
-# Windows profile would otherwise collect stray .zshrc/.zprofile files.
+# Deploy the zsh entrypoints only when zsh exists (a fresh Silverblue or a
+# cloud image may have none): no stray .zshrc/.zprofile on those hosts.
 if command -v zsh >/dev/null 2>&1; then
 	for target in "${ZDOTDIR:-$HOME}/.zprofile" "${ZDOTDIR:-$HOME}/.zshrc"; do
 		cp "${DOTFILES:-$HOME/dotfiles}/src-dotfiles.sh" "$target"

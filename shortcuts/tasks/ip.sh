@@ -4,7 +4,7 @@
 # toast the primary IPv4. Install target: ~/.shortcuts/tasks/ip.sh;
 # deploy.sh copies this file there, chmod 700.
 #
-# Bundles profile.d/50_ip.sh's logic minus the interactive-only guard:
+# Sole producer of ip.json (profile.d/50_ip.sh was removed in DR-038):
 # the widget spawns non-interactive shells, where the guard would
 # otherwise skip the write. Standalone task script contract: see
 # shortcuts/tasks/sshd.sh.
