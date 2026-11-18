@@ -173,13 +173,19 @@ DR-033; the Win32 append-only regime is gone with DR-038):
 ## 7. Supply-chain moratorium via env vars
 
 **Decision:** release-age cooldowns and hardening are expressed purely as
-environment variables in `70_moratorium.sh` — never by mutating other
-tools' config files (DR-005, DR-006, DR-011).
+environment variables — never by mutating other tools' config files (DR-005,
+DR-006, DR-011). Since the 2026-11-18 split they live in three files with one
+job each: `70_moratorium.sh` (release-age windows), `72_hardening.sh`
+(install-time refusals) and `10_env.sh` (cosmetic switches: `NPM_CONFIG_FUND`,
+`PIP_DISABLE_PIP_VERSION_CHECK`, `UV_INIT_BARE`).
 
-- Uniform 3-day window: `MISE_MINIMUM_RELEASE_AGE=3d`,
-  `UV_EXCLUDE_NEWER="3 days"`, `PIP_UPLOADED_PRIOR_TO` (commented; computed
-  form), `npm_config_min_release_age=3`,
-  `pnpm_config_minimum_release_age=4320` (minutes).
+- Window: `MISE_MINIMUM_RELEASE_AGE=24h` (mise; lowered from 3 d in commit
+  26060ee), `UV_EXCLUDE_NEWER="3 days"`, `npm_config_min_release_age=3`,
+  `pnpm_config_minimum_release_age=4320` (minutes). pip has no release-age
+  knob of its own, so uv carries the window for both. **Known non-uniformity:**
+  mise is 24 h while npm/pnpm/uv stay at 3 days — deliberate after the
+  lowering, but the code is the truth here and DR-005's original "uniform
+  3-day" claim is history.
 - Why lowercase npm/pnpm vars: npm/pnpm read them case-insensitively; the
   uppercase duplicates are kept commented — they work but are redundant and
   heavy-handed.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# 60_containers.sh — KUBECONFIG from ~/.kube/config.d (DR-032, DR-043).
+# 60_kubeconfig.sh — KUBECONFIG from ~/.kube/config.d (DR-032).
 #
 # Gate: none — env-only and cheap, so every shell and every interactivity.
 # Side effect: exports KUBECONFIG; an inherited one is left alone when the

@@ -3,13 +3,8 @@
 # DR-038).
 #
 # Gate: none, but the wholesale reset is skipped on cloud shells and Termux,
-# which own their PATH. Side effect: replaces PATH on desktop/WSL2 hosts and
-# exports ANDROID_HOME (moving that export out is deferred, DR-038).
-
-if [ -d "${HOME}/Android/Sdk" ]; then
-	ANDROID_HOME="${HOME}/Android/Sdk"
-	export ANDROID_HOME
-fi
+# which own their PATH. Side effect: replaces PATH on desktop/WSL2 hosts
+# (ANDROID_HOME moved to 10_env.sh — DR-038 split).
 
 # Cloud shells and Termux pre-build a correct PATH we must not disturb
 # ("don't mangle cursed $PATH", DR-014). Same markers 20_core.bash uses to

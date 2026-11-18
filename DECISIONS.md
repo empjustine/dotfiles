@@ -101,6 +101,11 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   / `PNPM_CONFIG_MINIMUM_RELEASE_AGE` duplicates are kept **commented** (they work
   but are heavy-handed/redundant — npm/pnpm read the lowercase vars
   case-insensitively).
+- **Status note (2026-11-18, DR-038):** the window is no longer uniform and no
+  longer lives in one file. `MISE_MINIMUM_RELEASE_AGE=24h` (lowered from 3 d in
+  commit 26060ee, 2026-11-07), while npm/pnpm/uv stay at 3 days; pip's
+  `PIP_UPLOADED_PRIOR_TO` was dropped as dead. Release-age vars are now
+  `70_moratorium.sh`, refusals `72_hardening.sh`, cosmetics `10_env.sh`.
 
 ## DR-006 | `NPM_CONFIG_IGNORE_SCRIPTS=true` | Accepted | 2025-12-02
 
@@ -110,6 +115,9 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   `70_moratorium.sh`.
 - **Consequences:** Strong supply-chain hardening. Cost: packages that *require*
   install scripts (e.g. some native builds) need an explicit opt-in.
+- **Status note (2026-11-18, DR-038):** moved to `profile.d/72_hardening.sh`
+  together with `PIP_REQUIRE_VIRTUALENV` — the refusals are one file, the
+  release-age windows another.
 
 ## DR-007 | WSL2 login hardening: fstrim, shared root, cross-distro bind, keyring | Accepted (hardening, applied) | 2025-07-08
 
@@ -213,6 +221,9 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   `PIP_*`, `PNPM_*`). `deploy.sh` no longer mutates other tools' config files.
 - **Consequences:** Much safer — no clobbering of user/tool-owned config, and the
   policy travels with the shell, not with the install host. Good simplification.
+- **Status note (2026-11-18, DR-038):** still env-var-only, but split by intent
+  into `70_moratorium.sh` (delay), `72_hardening.sh` (refusal) and `10_env.sh`
+  (cosmetics) so no file mixes two policies again.
 
 ## DR-012 | `VIRTUAL_ENV_DISABLE_PROMPT=1` | Accepted, not applied | 2025-12-02
 
@@ -246,6 +257,8 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   `~/bin`, `~/.bin`, `~/.shortcuts`) are deliberately never re-added — see
   DR-033. Usually fine for a dev CLI user; worth noting that it is a hard
   reset, not a merge.
+- **Status note (2026-11-18, DR-038):** `ANDROID_HOME` moved out of this file
+  into `10_env.sh`; `80_path.sh` now owns PATH and nothing else.
 
 ## DR-015 | Single unified entrypoint `src-dotfiles.sh` | Accepted (applied) | 2026-07
 
@@ -941,7 +954,14 @@ therefore still install per-user entrypoints (`~/.bashrc`, `~/.zshrc`, …) —
   duplicated between bash and zsh, `70_moratorium.sh` muxing policy areas,
   platform detection repeated in three files, kubectl split between
   `40_completion.*` and `60_containers.sh` — are deliberately deferred, not
-  forgotten. Hoisting the per-file shell/interactivity gates into
+  forgotten.
+- **Status note (2026-11-18, follow-up):** the clarity half of that list is now
+  applied — `70_moratorium.sh` split into delay / refusal / cosmetics
+  (`70_moratorium.sh`, `72_hardening.sh`, `10_env.sh`), `ANDROID_HOME` moved
+  out of `80_path.sh`, and `60_containers.sh` renamed to `60_kubeconfig.sh`.
+  Still deferred: the discovery cascade duplicated between bash and zsh (now
+  cheap to share, DR-043), and platform detection in `20_core.bash` vs
+  `80_path.sh`. Hoisting the per-file shell/interactivity gates into
   `src-dotfiles.sh` via a filename convention is *researched only*; see
   [docs/execution-map.md](docs/execution-map.md).
 
@@ -1103,3 +1123,9 @@ eval — the spawn is the smaller half.
   non-interactive path. The guard is *not* for work that must self-heal (the
   REPL `mkdir` pre-check stays a `-d` test) and *not* for in-shell state
   (completions, hooks, PATH) — those must run every shell, which is NFR-7.
+- **Status note (2026-11-18, same day):** the helper set was folded *into*
+  `src-dotfiles.sh` instead of living in `lib/dotfiles.sh`. The entrypoint is
+  copied verbatim onto four rc targets (DR-015) and `deploy.sh` copies nothing
+  else (DR-016), so a separate library made the deployed copy depend on a file
+  it does not install. Same functions, same semantics, one fewer resolution
+  step; `lib/` no longer exists.

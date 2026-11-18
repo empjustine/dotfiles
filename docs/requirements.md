@@ -124,11 +124,11 @@ default tooling path and default sourcing and add nothing on top.
   Termux:Widget background task `shortcuts/tasks/ip.sh`; the shell-startup
   snippet that used to write it was removed in DR-038, so no shell start
   touches the synced folder any more (DR-009).
-- **REQ-6 Supply-chain moratorium.** mise, npm, pnpm and uv lag "latest" by
-  a 3-day release-age window (pip's window variable,
-  `PIP_UPLOADED_PRIOR_TO`, is prepared but currently inactive); npm
-  lifecycle scripts are disabled globally; pip installs are confined to
-  venvs (DR-005, DR-006).
+- **REQ-6 Supply-chain moratorium.** mise, npm, pnpm and uv lag "latest" by a
+  release-age window (mise 24 h; npm/pnpm/uv 3 days); npm lifecycle scripts are
+  disabled globally; pip installs are confined to venvs. Delays
+  (`70_moratorium.sh`), refusals (`72_hardening.sh`) and cosmetic switches
+  (`10_env.sh`) are one file each (DR-005, DR-006, DR-011, DR-038).
 - **REQ-7 Termux:Widget scaffolding.** Deploy creates the Termux:Widget
   script directories and copies the two background-task scripts
   (`shortcuts/tasks/sshd.sh`, `shortcuts/tasks/ip.sh`) into
@@ -136,7 +136,8 @@ default tooling path and default sourcing and add nothing on top.
 - **REQ-8 Throttled maintenance.** Work that mutates world state but is not
   needed on every shell runs at most "every N startups or every X seconds",
   configurable via `DOTFILES_RUN_EVERY` and `DOTFILES_RUN_AGE`, and privileged
-  WSL2 steps run once per boot. The guard is `lib/dotfiles.sh` (DR-043);
+  WSL2 steps run once per boot. The guard is built into `src-dotfiles.sh`
+  (DR-043);
   in-shell state (hooks, completions, PATH, env vars) is exempt and must run on
   every shell, per NFR-7 (DR-041).
 

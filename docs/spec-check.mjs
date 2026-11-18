@@ -39,10 +39,10 @@ const ROOT_ID = 'index';
 const LOG_FILE = 'DECISIONS.md';
 
 /** Trees whose every file must have a row in the inventory of docs/system.md. */
-const INVENTORY_DIRS = ['profile.d', 'shortcuts/tasks', 'lib'];
+const INVENTORY_DIRS = ['profile.d', 'shortcuts/tasks'];
 
 /** Directories whose shell files must carry a header comment (what/gate/DR). */
-const SNIPPET_DIRS = ['profile.d', 'lib'];
+const SNIPPET_DIRS = ['profile.d'];
 
 /** How far into a file the header block may sit. */
 const HEADER_WINDOW = 16;

@@ -113,13 +113,15 @@ exactly what the `case "$-" in *i*)` gates protect (DR-017).
 | `10_wsl2.sh` | `$WSL_DISTRO_NAME`, then `I` for everything privileged | 0 (non-WSL / non-I); up to 4 `sudo` + 2 `findmnt` | strip `XDG_RUNTIME_DIR` slash; per boot: tmpfs ownership, fstrim, mounts; keyring start | per-boot stamp `.dotfiles-wsl-<boot_id>-<uid>`; keyring by `GNOME_KEYRING_CONTROL` |
 | `20_core.bash` | `bash` | 0 | re-sources upstream rc | none (must run every shell) |
 | `40_completion.bash/.zsh` | `bash`/`zsh`, then `I` | 0 warm (`mise activate` is a hook: 1 generator + eval, ~29 ms); **4 on a refresh** (`mise`, `uv`, `uvx`, `kubectl`) | writes the completion cache (`$XDG_CACHE_HOME/dotfiles/completions/` or `$XDG_DATA_HOME/zsh/site-functions/`) | `df_due completions` — every `DOTFILES_RUN_EVERY` (50) startups or `DOTFILES_RUN_AGE` (86400 s), plus a forced refresh when a tool binary is newer than its blob (DR-041, DR-043) |
-| `60_containers.sh` | always | 1 (`find`) + 1 (`tr`), only when `~/.kube/config.d` exists | none (sets `KUBECONFIG`) | none (cheap) |
+| `60_kubeconfig.sh` | always | 1 (`find`) + 1 (`tr`), only when `~/.kube/config.d` exists | none (sets `KUBECONFIG`) | none (cheap) |
 | `70_history.bash/.zsh` | `bash`/`zsh`, then `I` | 1 (`atuin --version` per candidate until one validates, then `atuin init`) | none | none — hooks are in-shell state |
 | `70_history.sh` | always | 0 in steady state (2 in-shell `-d` tests; `mkdir` only when a dir is missing) | creates `$XDG_STATE_HOME`, `$XDG_CONFIG_HOME/vim`; folds legacy history files | pre-check, self-healing (no stamp) |
+| `10_env.sh` | always | 0 | none (env vars only) | n/a |
 | `70_moratorium.sh` | always | 0 | none (env vars only) | n/a |
-| `80_path.sh` | always | 0 | replaces `PATH` (except cloud/Termux); exports `ANDROID_HOME` | n/a |
+| `72_hardening.sh` | always | 0 | none (env vars only) | n/a |
+| `80_path.sh` | always | 0 | replaces `PATH` (except cloud/Termux) | n/a |
 | `90_navigation.zsh` | `zsh`, `I`, `TERM=xterm-256color` | 0 | none (keybinds) | n/a |
-| `lib/dotfiles.sh` | sourced by the entrypoint, before the loop | 0 | one counter write in `$XDG_STATE_HOME/dotfiles/startups` when `df_startup` is called (interactive consumers only) | n/a — it *is* the guard (DR-043) |
+| `src-dotfiles.sh` helpers | defined by the entrypoint, before the loop | 0 | one counter write in `$XDG_STATE_HOME/dotfiles/startups` when `df_startup` is called (interactive consumers only) | n/a — they *are* the guard (DR-043) |
 | `shortcuts/tasks/*.sh` | Termux:Widget task (never startup) | — | restart sshd / write `ip.json` | n/a — user-initiated |
 
 Nothing in the startup chain writes to world state on every shell any more:

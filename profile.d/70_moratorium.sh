@@ -1,35 +1,22 @@
 #!/bin/sh
-# 70_moratorium.sh — supply-chain policy as environment variables (DR-005,
-# DR-006, DR-011).
+# 70_moratorium.sh — dependency moratorium: release-age windows only (DR-005,
+# DR-011).
 #
-# Gate: none; no file is written and no tool config is mutated — the policy
-# travels with the shell, so it applies in every environment. Note: the file
-# still muxes three policies (release-age window, npm/pip hardening, uv
-# behaviour); splitting them is deferred, see DR-038's consequences.
+# Gate: none; env-only and host-agnostic — the policy travels with the shell
+# instead of being written into each tool's config (DR-011).
+# Side effect: exports only. Install-time refusals live in 72_hardening.sh and
+# the cosmetic switches in 10_env.sh (DR-038 split).
 
 # @see https://mise.jdx.dev/configuration/settings.html#minimum_release_age
 MISE_MINIMUM_RELEASE_AGE="24h"
 export MISE_MINIMUM_RELEASE_AGE
 
-#NPM_CONFIG_BEFORE="$(date -u -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ')"
-#NPM_CONFIG_FROZEN_LOCKFILE="true"
-NPM_CONFIG_FUND="false"
-NPM_CONFIG_IGNORE_SCRIPTS="true"
+# npm/pnpm read these case-insensitively; the lowercase spelling is the one
+# that survives both. pnpm counts minutes: 4320 = 3 days.
 npm_config_min_release_age="3"
-#NPM_CONFIG_MIN_RELEASE_AGE="3"
-export NPM_CONFIG_FUND NPM_CONFIG_IGNORE_SCRIPTS npm_config_min_release_age
-
-PIP_DISABLE_PIP_VERSION_CHECK=1
-PIP_REQUIRE_VIRTUALENV=true
-#PIP_UPLOADED_PRIOR_TO="$(date -u -d '3 days ago' '+%Y-%m-%dT%H:%M:%SZ')"
-UV_EXCLUDE_NEWER="3 days"
-export PIP_DISABLE_PIP_VERSION_CHECK PIP_REQUIRE_VIRTUALENV UV_EXCLUDE_NEWER
-
-#NPM_CONFIG_MINIMUM_RELEASE_AGE="4320"
 pnpm_config_minimum_release_age="4320"
-#PNPM_CONFIG_MINIMUM_RELEASE_AGE="4320"
-export pnpm_config_minimum_release_age
+export npm_config_min_release_age pnpm_config_minimum_release_age
 
-UV_INIT_BARE="1"
-# VIRTUAL_ENV_DISABLE_PROMPT=1
-export UV_INIT_BARE
+# pip has no release-age knob of its own; uv carries the window for both.
+UV_EXCLUDE_NEWER="3 days"
+export UV_EXCLUDE_NEWER

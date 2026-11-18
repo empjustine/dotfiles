@@ -33,16 +33,17 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 
 | file | role |
 |---|---|
-| `src-dotfiles.sh` | unified POSIX entrypoint; guard, `lib/dotfiles.sh` source, then the `profile.d/` loop. Copied verbatim to the rc targets by `deploy.sh` |
-| `lib/dotfiles.sh` | shared POSIX helpers sourced before the loop: `df_startup` / `df_due` / `df_stamp`, the run-guard behind every throttled refresh (DR-043) |
+| `src-dotfiles.sh` | unified POSIX entrypoint and the whole implementation of the run-guard (`df_startup` / `df_due` / `df_stamp`, DR-043): re-entrancy guard, helpers, `profile.d/` loop. Copied verbatim to the rc targets by `deploy.sh`, so it stays self-contained |
+| `profile.d/10_env.sh` | environment switches that are neither policy nor PATH: `ANDROID_HOME`, `NPM_CONFIG_FUND`, `PIP_DISABLE_PIP_VERSION_CHECK`, `UV_INIT_BARE` (DR-038 split) |
 | `profile.d/10_wsl2.sh` | WSL2 plumbing: `XDG_RUNTIME_DIR` normalization, then (interactive, one per-boot stamp) tmpfs ownership, `fstrim /`, shared-root propagation, cross-distro bind mount, gnome-keyring (DR-007, DR-038) |
 | `profile.d/20_core.bash` | sources the distro/cloud/system bashrc (`/etc/bashrc`, `/etc/bash.bashrc`, Termux profile, Google/Oracle cloud bashrc) (DR-020) |
 | `profile.d/40_completion.{bash,zsh}` | tab completion: bash-completion framework / `compinit`, brew shellenv, mise activate, uv/uvx, kubectl — identical allowlist cascade + mise-shim trust gate in both (DR-021, DR-026, DR-038) |
-| `profile.d/60_containers.sh` | dynamic `KUBECONFIG` from `~/.kube/config.d` (DR-032) |
+| `profile.d/60_kubeconfig.sh` | dynamic `KUBECONFIG` from `~/.kube/config.d` (DR-032) |
 | `profile.d/70_history.{bash,zsh}` | atuin history hooks: allowlisted discovery, `--version` smoke test, `atuin init <shell>` (DR-016, DR-026) |
 | `profile.d/70_history.sh` | REPL history relocation into `$XDG_STATE_HOME` + legacy-file fold (DR-003, DR-038) |
-| `profile.d/70_moratorium.sh` | supply-chain env vars: release-age windows, `NPM_CONFIG_IGNORE_SCRIPTS`, `PIP_REQUIRE_VIRTUALENV` (DR-005, DR-006, DR-011) |
-| `profile.d/80_path.sh` | PATH policy: wholesale reset (DR-014) except on cloud shells/Termux; `ANDROID_HOME` |
+| `profile.d/70_moratorium.sh` | dependency moratorium only: release-age windows (`MISE_MINIMUM_RELEASE_AGE`, `UV_EXCLUDE_NEWER`, `npm_config_min_release_age`, `pnpm_config_minimum_release_age`) (DR-005, DR-011) |
+| `profile.d/72_hardening.sh` | install-time refusals: `NPM_CONFIG_IGNORE_SCRIPTS`, `PIP_REQUIRE_VIRTUALENV` (DR-006, DR-011) |
+| `profile.d/80_path.sh` | PATH policy: wholesale reset (DR-014) except on cloud shells/Termux (DR-033) |
 | `profile.d/90_navigation.zsh` | xterm-256color keybindings (word-jump, Home/End/Delete) |
 | `shortcuts/tasks/sshd.sh` | Termux:Widget background task — restart sshd and toast its status (was embedded in `termux-shortcuts.html`); copied verbatim to `~/.shortcuts/tasks/sshd.sh` by `deploy.sh` (DR-036) |
 | `shortcuts/tasks/ip.sh` | Termux:Widget background task — **sole producer of `ip.json`** for Markor, plus a toast of the primary IPv4 (DR-009, DR-036, DR-038); copied to `~/.shortcuts/tasks/ip.sh` by `deploy.sh` |
