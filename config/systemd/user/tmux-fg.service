@@ -1,0 +1,12 @@
+[Unit]
+Description=Interactive tmux server (fgtmux)
+
+[Service]
+Type=simple
+ExecStart=%h/dotfiles/bin/tmux-profiles service fg
+ExecStop=/usr/bin/tmux -L fgtmux kill-server
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

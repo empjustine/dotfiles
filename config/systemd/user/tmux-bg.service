@@ -1,0 +1,12 @@
+[Unit]
+Description=Maintenance tmux server (bgtmux)
+
+[Service]
+Type=simple
+ExecStart=%h/dotfiles/bin/tmux-profiles service bg
+ExecStop=/usr/bin/tmux -L bgtmux kill-server
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

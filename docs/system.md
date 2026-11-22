@@ -39,12 +39,18 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | `profile.d/20_core.bash` | sources the distro/cloud/system bashrc (`/etc/bashrc`, `/etc/bash.bashrc`, Termux profile, Google/Oracle cloud bashrc) (DR-020) |
 | `profile.d/40_completion.{bash,zsh}` | tab completion: bash-completion framework / `compinit`, brew shellenv, mise activate, uv/uvx, kubectl — identical allowlist cascade + mise-shim trust gate in both (DR-021, DR-026, DR-038) |
 | `profile.d/60_kubeconfig.sh` | dynamic `KUBECONFIG` from `~/.kube/config.d` (DR-032) |
-| `profile.d/70_history.{bash,zsh}` | atuin history hooks: allowlisted discovery, `--version` smoke test, `atuin init <shell>` (DR-016, DR-026) |
+| `profile.d/70_history.{bash,zsh}` | atuin history hooks: allowlisted discovery (shims and install trees), `--version` smoke test, `atuin init <shell>` (DR-016, DR-026, DR-050) |
 | `profile.d/70_history.sh` | REPL history relocation into `$XDG_STATE_HOME` + legacy-file fold (DR-003, DR-038) |
 | `profile.d/70_moratorium.sh` | dependency moratorium only: release-age windows (`MISE_MINIMUM_RELEASE_AGE`, `UV_EXCLUDE_NEWER`, `npm_config_min_release_age`, `pnpm_config_minimum_release_age`) (DR-005, DR-011) |
 | `profile.d/72_hardening.sh` | install-time refusals: `NPM_CONFIG_IGNORE_SCRIPTS`, `PIP_REQUIRE_VIRTUALENV` (DR-006, DR-011) |
-| `profile.d/80_path.sh` | PATH policy: wholesale reset (DR-014) except on cloud shells/Termux (DR-033) |
+| `profile.d/80_path.sh` | PATH policy: wholesale reset (DR-014) except on cloud shells/Termux (DR-033), plus the repo's versioned `bin/` (DR-046) |
 | `profile.d/90_navigation.zsh` | xterm-256color keybindings (word-jump, Home/End/Delete) |
+| `bin/tmux-profiles` | the only interface to the two tmux profiles: `start`, `stop`, `status`, `fg`, `bg`, `upkeep`, `service`, `warn-linger`; unit and timer `ExecStart` (DR-046, DR-047) |
+| `bin/fgtmux`, `bin/bgtmux` | attach wrappers: warn when `Linger=no`, then delegate to `tmux-profiles fg`/`bg`, forwarding argv to `tmux attach` (DR-047) |
+| `config/systemd/user/tmux-fg.service` | `Type=simple` unit supervising `fgtmux` / `main`, restarted on failure (DR-046, DR-047) |
+| `config/systemd/user/tmux-bg.service` | same for `bgtmux` / `jobs`; the `keepalive` window holds the session open (DR-046, DR-047) |
+| `config/systemd/user/tmux-upkeep.service`, `tmux-upkeep.timer` | daily `tmux-profiles upkeep`: stale job windows and old logs (DR-046) |
+| `config/tmux/tmux.conf` | server options for both profiles: `update-environment` list refreshed from the attaching client (DR-048) |
 | `shortcuts/tasks/sshd.sh` | Termux:Widget background task — restart sshd and toast its status (was embedded in `termux-shortcuts.html`); copied verbatim to `~/.shortcuts/tasks/sshd.sh` by `deploy.sh` (DR-036) |
 | `shortcuts/tasks/ip.sh` | Termux:Widget background task — **sole producer of `ip.json`** for Markor, plus a toast of the primary IPv4 (DR-009, DR-036, DR-038); copied to `~/.shortcuts/tasks/ip.sh` by `deploy.sh` |
 | `deploy.sh` | copies `src-dotfiles.sh` onto the rc targets (zsh targets only when zsh exists); Termux:Widget dir scaffolding + `shortcuts/tasks/*.sh` background tasks (DR-036) |
@@ -123,7 +129,8 @@ Per-environment behavior:
 ## 5. Tool wiring reference
 
 - **atuin** (`70_history.{bash,zsh}`): resolved from an ordered
-  allowlist — mise shims (XDG/user/system), brew, Termux, `/usr/bin` —
+  allowlist — mise shims (XDG/user/system), mise install-tree binaries,
+  brew, Termux, `/usr/bin` —
   validated with `--version`, with a one-shot `mise use -g atuin`
   auto-provision for versionless mise shims (DR-016, DR-026). atuin ≥ 18.18.x bundles its own
   bash-preexec (V0.7.0) and auto-loads it at init time when no other
@@ -172,6 +179,9 @@ Per-environment behavior:
 | `~/.shortcuts/tasks/sshd.sh` | `deploy.sh` (copies `shortcuts/tasks/sshd.sh`) | Termux:Widget background task (sshd restart) |
 | `~/.shortcuts/tasks/ip.sh` | `deploy.sh` (copies `shortcuts/tasks/ip.sh`) | Termux:Widget background task (ip.json refresh + toast) |
 | `report.txt` | `lint.sh` | per-run shfmt/shellcheck/`zsh -n`/docs-gate log; truncated at each run |
+| `/tmp/tmux-$UID/{fgtmux,bgtmux}` | tmux servers owned by the two units (DR-046) | `tmux-profiles fg/bg`, maintenance launchers |
+| `~/.config/systemd/user/tmux-*.service`, `tmux-upkeep.timer` | `deploy.sh` copies from `config/systemd/user/` on systemd hosts (DR-046) | the user manager; `systemctl --user` |
+| `$XDG_STATE_HOME/bgterm/*.log` | maintenance job launchers | pruned by `tmux-profiles upkeep` after a week (DR-046) |
 
 ## 7. Deployment & maintenance
 
@@ -179,8 +189,10 @@ Per-environment behavior:
   `~/.bash_profile`/`~/.bashrc` (and `~/.zprofile`/`~/.zshrc` when zsh
   exists). After deploy the rc files *are* the entrypoint (copied, not
   symlinked — each stays self-contained). On Termux it additionally copies
-  `shortcuts/tasks/{sshd,ip}.sh` into `~/.shortcuts/tasks/` (DR-036). The
-  one supported extension point is `~/dotfiles/profile.d/`.
+  `shortcuts/tasks/{sshd,ip}.sh` into `~/.shortcuts/tasks/` (DR-036). On
+  systemd hosts with tmux and a user bus it also copies
+  `config/systemd/user/tmux-*` (DR-046). The one supported shell extension
+  point is `~/dotfiles/profile.d/`; `bin/` is consumed from the checkout.
 - **Lint:** `lint.sh` runs `shfmt --write --indent 0 --binary-next-line
   --case-indent` and `shellcheck --check-sourced --external-sources
   --severity=style --enable=all --exclude=SC2292,SC2250` over

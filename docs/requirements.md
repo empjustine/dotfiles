@@ -140,6 +140,13 @@ default tooling path and default sourcing and add nothing on top.
   (DR-043);
   in-shell state (hooks, completions, PATH, env vars) is exempt and must run on
   every shell, per NFR-7 (DR-041).
+- **REQ-9 Persistent tmux profiles.** Two versioned servers — `fgtmux`
+  (interactive) and `bgtmux` (maintenance) — are owned by systemd user
+  units, started under lingering at boot and pruned daily by
+  `bin/tmux-profiles`; neither aliases nor shell-startup hooks start them
+  (DR-046). The units restart a dead server, and `bin/fgtmux` / `bin/bgtmux`
+  warn before attaching when lingering is disabled (DR-047). Attaching
+  refreshes the session environment from the client (DR-048).
 
 ## 4. Non-functional requirements / constraints
 

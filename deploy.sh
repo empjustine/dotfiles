@@ -45,3 +45,21 @@ if [ "$TERMUX" -eq 1 ]; then
 	cp "${DOTFILES:-$HOME/dotfiles}/shortcuts/tasks/ip.sh" ~/.shortcuts/tasks/ip.sh
 	chmod 700 ~/.shortcuts/tasks/sshd.sh ~/.shortcuts/tasks/ip.sh
 fi
+
+# systemd hosts: install the two tmux profile units and the daily upkeep
+# timer (DR-046). The user bus must already be up (lingering) and tmux must
+# exist, otherwise enable --now would leave a failing unit on the host.
+if [ "$TERMUX" -eq 0 ] && command -v tmux >/dev/null 2>&1 \
+	&& command -v systemctl >/dev/null 2>&1 \
+	&& systemctl --user is-active default.target >/dev/null 2>&1; then
+	units="${DOTFILES:-$HOME/dotfiles}/config/systemd/user"
+	config="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+	mkdir -p -- "$config"
+	for unit in "$units"/*.service "$units"/*.timer; do
+		[ -f "$unit" ] || continue
+		cp "$unit" "$config/$(basename "$unit")"
+	done
+	systemctl --user daemon-reload
+	systemctl --user enable --now tmux-fg.service tmux-bg.service tmux-upkeep.timer
+	unset unit units config
+fi

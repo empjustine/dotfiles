@@ -327,6 +327,9 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   and `bash-preexec.sh` would risk leaving stale copies of both lying around on
   previously-provisioned hosts; the full repo checkout remains the supported
   deployment path.
+- **Status note (2026-11-22, DR-050):** the trusted list also includes atuin
+  binaries under the mise install roots, for hosts where mise exposes the
+  tool without creating a shim.
 
 ## DR-017 | Canonical interactive guard (`$-`) for shell-specific snippets | Accepted (applied) | 2026-07
 
@@ -1212,3 +1215,107 @@ eval — the spawn is the smaller half.
   ~120 ms (~100 ms in shims mode) and zsh ~150 ms (~144 ms); atuin's own init
   is ~40 ms of that and mise's hook ~30 ms. That is the floor for this design
   without dropping features, and it is now recorded rather than guessed.
+
+## DR-046 | Two tmux profiles owned by user units, driven by one repo-owned command | Accepted (applied) | 2026-11-22
+
+- **Context:** `KillUserProcesses=true` puts terminal-launched tmux in the
+  session scope logind kills at logout. `systemd-run --scope --user` gets a
+  process out of that scope, but only lingering keeps `user@.service` alive
+  after the last logout. Starting the servers from `profile.d/` would put
+  world-state work in every shell of the execution map's shapes 1–5 and give
+  no boot-time trigger after a logout; aliases would bury the same mechanism
+  in each interactive shell.
+- **Decision:** keep two servers — `fgtmux`/`main` for interactive work and
+  `bgtmux`/`jobs` for maintenance windows — as `Type=oneshot` +
+  `RemainAfterExit=yes` user services, so the daemonised server and every pane
+  it forks stay in the unit's cgroup. `config/systemd/user/tmux-fg.service`,
+  `tmux-bg.service`, `tmux-upkeep.service` and `tmux-upkeep.timer` are
+  versioned here and copied by `deploy.sh` only when tmux and a user bus
+  exist; `loginctl enable-linger` stays a prerequisite outside the repo.
+  `bin/tmux-profiles` is the only interface (`start`, `stop`, `status`, `fg`,
+  `bg`, `upkeep`), falling back to direct tmux where there is no systemd;
+  `80_path.sh` puts the repo's `bin/` on PATH so it is a command, not an
+  alias. Upkeep kills maintenance windows older than a day except
+  `keepalive`, and deletes bgterm logs older than a week.
+- **Consequences:** both servers exist before login after boot and survive
+  logout; stopping a unit kills its whole tree. Shell startup pays one
+  versioned PATH entry and no world-state write. `deploy.sh` gains a third
+  copy class, amending DR-016's invariant the way DR-036 did for Termux
+  tasks. The upkeep unit hard-codes `%h/dotfiles/bin/...`, so a relocated
+  checkout needs that unit edited; non-systemd hosts run the same command by
+  hand.
+- **Status note (2026-11-22, DR-047):** the units supervise a foreground
+  loop instead of exiting after spawn, so a dead server is restarted; the
+  attach commands are now `bin/fgtmux` and `bin/bgtmux`, which warn when
+  lingering is off.
+
+## DR-047 | Supervised tmux services and linger-aware attach commands | Accepted (applied) | 2026-11-22
+
+- **Context:** DR-046's `Type=oneshot` + `RemainAfterExit` units keep the
+  server's cgroup but cannot supervise it: the tracked process is the short
+  launcher, which exits cleanly, so `Restart=` never fires when the tmux
+  server dies. Attaching also hid a prerequisite: with lingering off the
+  user manager is stopped at the last logout and both servers go with it,
+  even though the attach itself succeeds.
+- **Decision:** each profile unit is now `Type=simple` with
+  `Restart=on-failure` and `RestartSec=5s`, running
+  `tmux-profiles service fg|bg`. That command creates the session if needed
+  and keeps a foreground loop alive while it exists; when the server or the
+  session dies, the loop exits non-zero and systemd recreates it. Detection
+  lags by one five-second poll. `bin/fgtmux` and `bin/bgtmux` replace aliases:
+  they warn on stderr when `loginctl show-user -p Linger` says `no`, then
+  delegate to `tmux-profiles fg`/`bg`. Hosts without `loginctl` (Termux) stay
+  silent.
+- **Consequences:** an interrupted or crashed server comes back on its own;
+  `systemctl --user stop` still wins because systemd does not restart a
+  service it is stopping. The warning is informational — nothing enables
+  lingering from a shell, and the units remain inert without it after the
+  last logout.
+- **Status note (2026-11-22):** the wrappers and the `fg`/`bg` paths forward
+  `"$@"` to `tmux attach`, so flags such as `-c`, `-d` and `-r` reach tmux;
+  `attach` has no positional shell-command argument.
+
+## DR-048 | A versioned tmux config refreshes the session environment on attach | Accepted (applied) | 2026-11-22
+
+- **Context:** both servers are created by systemd before a graphical or SSH
+  client exists, so their global environment lacks `DISPLAY`,
+  `WAYLAND_DISPLAY`, `XAUTHORITY`, `DBUS_SESSION_BUS_ADDRESS` and
+  `SSH_AUTH_SOCK`. The attach commands forwarded argv (DR-047) but did
+  nothing about that environment; tmux only copies variables listed in
+  `update-environment` from the attaching client into the session
+  environment.
+- **Decision:** `config/tmux/tmux.conf` sets that list, and every server
+  creation in `tmux-profiles` passes it with `tmux -f`. Being a server config,
+  it is read once when the server starts — including after a DR-047 restart —
+  with no per-attach call and no race against a just-started unit.
+- **Consequences:** attaching refreshes the session environment; windows and
+  panes created after the attach inherit it. Processes in panes that already
+  exist keep their original environment — tmux does not rewrite a running
+  process's env, so a boot-time pane still needs a fresh shell or an explicit
+  `tmux set-environment` plus restart to see a newly available display.
+  The dedicated sockets mean this config replaces, rather than merges with,
+  any personal `~/.tmux.conf` for these two profiles.
+
+## DR-050 | Trust mise install-tree atuin binaries as well as shims | Accepted (applied) | 2026-11-22
+
+- **Context:** an interactive shell reported "atuin is on `$PATH` but in no
+  allowlisted location — history hooks are off". `command -v atuin` resolved
+  to `~/.local/share/mise/installs/atuin/latest/atuin-<target>/atuin`: mise's
+  hook-env can put a standalone tool's install directory on `$PATH` without
+  creating a shim. DR-016's allowlist only named shims, brew, Termux and
+  `/usr/bin`, so the loop skipped every candidate and silently disabled the
+  history hooks.
+- **Decision:** both `70_history.{bash,zsh}` add globbed candidates under the
+  XDG/user and system mise install roots, after the shim slots and before
+  brew. They pass the same `--version` smoke test; there is still no bare
+  `command -v atuin` discovery. The generated hooks keep calling bare `atuin`,
+  which on these hosts resolves to the same mise path, so the existing
+  init-vs-hook comparison stays quiet.
+- **Consequences:** history hooks install for mise-managed standalone atuin
+  builds. If several builds exist under one root, the first glob match wins;
+  the version-pinned shim slots still take precedence. Nothing outside the
+  two trusted mise roots is newly trusted.
+- **Status note (2026-11-22):** zsh expands unmatched globs with an error by
+  default, so the install-tree patterns in `70_history.zsh` carry the `(N)`
+  glob qualifier — a missing tree contributes no candidate instead of
+  breaking the shell startup.

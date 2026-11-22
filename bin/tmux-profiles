@@ -1,0 +1,206 @@
+#!/bin/sh
+# tmux-profiles — start, stop, attach and prune the two persistent tmux servers (DR-046, DR-047, DR-048).
+#
+# Gate: none — this is a command, not a sourced snippet; no shell-startup cost.
+# Touches: systemd user units where a user bus exists, tmux sockets otherwise;
+# on upkeep, old job windows on bgtmux and logs under $XDG_STATE_HOME/bgterm.
+
+set -u
+
+FG_SOCKET=fgtmux
+FG_SESSION=main
+FG_UNIT=tmux-fg.service
+BG_SOCKET=bgtmux
+BG_SESSION='jobs'
+BG_UNIT=tmux-bg.service
+TMUX_CONF="${DOTFILES:-$HOME/dotfiles}/config/tmux/tmux.conf"
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/bgterm"
+WINDOW_MAX_AGE="${TMUX_WINDOW_MAX_AGE:-86400}"
+LOG_MAX_AGE="${TMUX_LOG_MAX_AGE:-7}"
+
+usage() {
+	printf 'usage: tmux-profiles {start|stop|status|fg|bg|upkeep|service|warn-linger} [fg|bg|all]\n' >&2
+}
+
+has_systemd() {
+	command -v systemctl >/dev/null 2>&1 || return 1
+	systemctl --user is-active default.target >/dev/null 2>&1
+}
+
+warn_linger() {
+	command -v loginctl >/dev/null 2>&1 || return 0
+	user=$(id -un) || return 0
+	linger=$(loginctl show-user "$user" -p Linger 2>/dev/null || :)
+	case ${linger##*=} in
+		yes | '') return 0 ;;
+		no)
+			printf 'warning: lingering is off — tmux servers die at logout (loginctl enable-linger %s)\n' "$user" >&2
+			;;
+		*) : ;;
+	esac
+}
+
+socket_for() {
+	case $1 in
+		fg) printf '%s\n' "$FG_SOCKET" ;;
+		bg) printf '%s\n' "$BG_SOCKET" ;;
+		*) return 1 ;;
+	esac
+}
+
+session_for() {
+	case $1 in
+		fg) printf '%s\n' "$FG_SESSION" ;;
+		bg) printf '%s\n' "$BG_SESSION" ;;
+		*) return 1 ;;
+	esac
+}
+
+unit_for() {
+	case $1 in
+		fg) printf '%s\n' "$FG_UNIT" ;;
+		bg) printf '%s\n' "$BG_UNIT" ;;
+		*) return 1 ;;
+	esac
+}
+
+start_one() {
+	profile=$1
+	socket=$(socket_for "$profile") || return 1
+	session=$(session_for "$profile") || return 1
+	if has_systemd; then
+		unit=$(unit_for "$profile") || return 1
+		systemctl --user start "$unit"
+		return
+	fi
+	tmux -L "$socket" has-session -t "$session" 2>/dev/null && return 0
+	if [ "$profile" = bg ]; then
+		tmux -f "$TMUX_CONF" -L "$socket" new-session -d -s "$session" -n keepalive /usr/bin/sleep infinity
+	else
+		tmux -f "$TMUX_CONF" -L "$socket" new-session -d -s "$session"
+	fi
+}
+
+stop_one() {
+	profile=$1
+	if has_systemd; then
+		unit=$(unit_for "$profile") || return 1
+		systemctl --user stop "$unit"
+	else
+		socket=$(socket_for "$profile") || return 1
+		tmux -L "$socket" kill-server 2>/dev/null || :
+	fi
+}
+
+status_one() {
+	profile=$1
+	socket=$(socket_for "$profile") || return 1
+	session=$(session_for "$profile") || return 1
+	if has_systemd; then
+		unit=$(unit_for "$profile") || return 1
+		state=$(systemctl --user is-active "$unit" 2>/dev/null || :)
+		printf '%s: %s\n' "$unit" "$state"
+	fi
+	if tmux -L "$socket" has-session -t "$session" 2>/dev/null; then
+		tmux -L "$socket" list-sessions -F '#{session_name}: #{session_windows} windows'
+	else
+		printf '%s: no tmux server\n' "$socket"
+	fi
+}
+
+upkeep() {
+	tmux -L "$BG_SOCKET" has-session -t "$BG_SESSION" 2>/dev/null || return 0
+	now=$(date +%s)
+	tmux -L "$BG_SOCKET" list-windows -t "$BG_SESSION" \
+		-F '#{window_id} #{window_name} #{window_created}' \
+		| while read -r id name created; do
+			[ "$name" = keepalive ] && continue
+			case $created in
+				'' | *[!0-9]*) continue ;;
+				*) : ;;
+			esac
+			[ "$((now - created))" -ge "$WINDOW_MAX_AGE" ] || continue
+			tmux -L "$BG_SOCKET" kill-window -t "$id"
+		done
+	[ -d "$LOG_DIR" ] || return 0
+	find "$LOG_DIR" -type f -name '*.log' -mtime "+$LOG_MAX_AGE" -delete
+	find "$LOG_DIR" -type f -name '*.sh' -mtime +1 -delete
+}
+
+service_one() {
+	profile=$1
+	socket=$(socket_for "$profile") || return 1
+	session=$(session_for "$profile") || return 1
+	if ! tmux -L "$socket" has-session -t "$session" 2>/dev/null; then
+		if [ "$profile" = bg ]; then
+			tmux -f "$TMUX_CONF" -L "$socket" new-session -d -s "$session" -n keepalive /usr/bin/sleep infinity || return 1
+		else
+			tmux -f "$TMUX_CONF" -L "$socket" new-session -d -s "$session" || return 1
+		fi
+	fi
+	# systemd tracks this loop, not the daemonised server: a dead server or
+	# session fails the loop, and Restart=on-failure recreates both (DR-047).
+	while tmux -L "$socket" has-session -t "$session" 2>/dev/null; do
+		sleep 5
+	done
+	printf '%s: tmux session %s on %s ended\n' "$profile" "$session" "$socket" >&2
+	return 1
+}
+
+for_profile() {
+	action=$1
+	case ${2:-all} in
+		fg) set -- fg ;;
+		bg) set -- bg ;;
+		all) set -- fg bg ;;
+		*)
+			usage
+			return 2
+			;;
+	esac
+	for profile in "$@"; do
+		case $action in
+			start) start_one "$profile" ;;
+			stop) stop_one "$profile" ;;
+			status) status_one "$profile" ;;
+			*) return 2 ;;
+		esac
+	done
+}
+
+[ $# -ge 1 ] || {
+	usage
+	exit 2
+}
+action=$1
+shift
+case $action in
+	start | stop | status) for_profile "$action" "${1:-all}" ;;
+	fg)
+		warn_linger
+		start_one fg && exec tmux -L "$FG_SOCKET" attach -t "$FG_SESSION" "$@"
+		;;
+	bg)
+		warn_linger
+		start_one bg && exec tmux -L "$BG_SOCKET" attach -t "$BG_SESSION" "$@"
+		;;
+	upkeep) upkeep ;;
+	service)
+		case ${1:-} in
+			fg | bg) service_one "$1" ;;
+			*)
+				usage
+				exit 2
+				;;
+		esac
+		;;
+	warn-linger) warn_linger ;;
+	help | -h)
+		usage
+		exit 0
+		;;
+	*)
+		usage
+		exit 2
+		;;
+esac

@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily upkeep of maintenance tmux windows and logs
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

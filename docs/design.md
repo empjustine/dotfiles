@@ -123,14 +123,17 @@ only from an explicit, ordered allowlist of install locations; an arbitrary
     gate** (DR-038) — they had silently diverged before.
   - atuin loop (`70_history.{bash,zsh}`): mise user shim (`$XDG_DATA_HOME`
     form, then full-string default) → system mise shim (env-var form, then
-    full-string default) → brew → Termux → `/usr/bin`.
+    full-string default) → mise install-tree binaries (XDG/user and system
+    roots, globbed; DR-050) → brew → Termux → `/usr/bin`.
   Literal defaults are listed alongside their env-var forms so the default
   install locations are always searched even when the vars point elsewhere;
   Termux and the system slots are fallback-only.
 - **Why `--version` smoke tests:** a mise shim can exist yet have no version
   selected (`mise ERROR No version is set for shim: atuin`, exit 1). The
   binary must be proven to run before it is trusted; versionless mise shims
-  get a one-shot `mise use -g atuin` auto-provision and re-check.
+  get a one-shot `mise use -g atuin` auto-provision and re-check. Install-tree
+  globs cover mise-managed standalone binaries that never get a shim; they
+  are still under the trusted mise root, not an arbitrary `$PATH` lookup.
 - **Why mise-shim probes require a resolvable mise** (`40_completion.bash`
   *and* `40_completion.zsh` — same gate in both since DR-038): shims only
   work while the mise binary itself is resolvable; otherwise a broken shim
@@ -163,7 +166,9 @@ DR-033; the Win32 append-only regime is gone with DR-038):
    appends. Predictability beats preservation: entries added elsewhere
    (snap, games, GUI session) are dropped *by design*, including the stock
    per-user dirs (`~/.local/bin`, `~/bin`, `~/.bin`, `~/.shortcuts`) —
-   `profile.d/` is the only supported extension point (DR-033).
+   `profile.d/` is the only supported *shell* extension point (DR-033);
+   the one versioned PATH entry is the repo's own `bin/` for
+   `tmux-profiles` (DR-046).
 2. **Cloud shells & Termux — untouched.** The provider pre-builds a correct
    PATH ("don't mangle cursed $PATH"); detection is via the cloud bashrc
    markers resp. the Termux prefix — the same markers `20_core.bash` uses to
@@ -255,7 +260,9 @@ KUBECONFIG separator.
 - `deploy.sh` only ever copies `src-dotfiles.sh` (plus zsh targets) and the
   `shortcuts/tasks/*.sh` background tasks (Termux-only; DR-036); it does
   not copy `profile.d/` — extending it would risk
-  stale copies on previously-provisioned hosts (DR-016).
+  stale copies on previously-provisioned hosts (DR-016). It now also
+  copies `config/systemd/user/tmux-*` on systemd hosts (DR-046); `bin/`
+  and `profile.d/` stay in the checkout.
 - Snippet scratch variables are unset/removed on scope exit (DR-019, DR-034).
 - Work that mutates *world* state (mounts, fstrim, keyring, history merge,
   generated completion blobs) is pre-checked, stamp-gated or throttled via

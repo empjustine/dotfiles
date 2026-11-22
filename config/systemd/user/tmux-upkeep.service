@@ -1,0 +1,6 @@
+[Unit]
+Description=Prune stale maintenance tmux windows and logs
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/bin/tmux-profiles upkeep

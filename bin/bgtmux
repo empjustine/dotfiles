@@ -1,0 +1,9 @@
+#!/bin/sh
+# bgtmux — attach to the maintenance tmux profile, warning if lingering is off (DR-046, DR-047).
+#
+# Gate: none — a command, not sourced. Touches: stderr warning plus the
+# tmux-profiles bg path; no state of its own.
+
+set -eu
+self_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+exec "$self_dir/tmux-profiles" bg "$@"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# 70_history.bash — atuin history hooks, interactive bash (DR-016, DR-037).
+# 70_history.bash — atuin history hooks, interactive bash (DR-016, DR-037, DR-050).
 #
 # Gate: bash only, interactive only. bash has no native preexec, so atuin
 # installs its own bash-preexec at `atuin init` time — the known random
@@ -21,11 +21,15 @@ esac
 # and the system "local" atuin are last (fallback only).
 atuin_bin=""
 mise_attempted=""
+# mise hook-env can expose a standalone atuin binary from an install dir
+# without creating a shim; those still live under the trusted mise root.
 for cand in \
 	"${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims/atuin" \
 	"$HOME/.local/share/mise/shims/atuin" \
 	"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims/atuin" \
 	/usr/local/share/mise/shims/atuin \
+	"${XDG_DATA_HOME:-$HOME/.local/share}"/mise/installs/atuin/*/atuin-*/atuin \
+	"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}"/installs/atuin/*/atuin-*/atuin \
 	/home/linuxbrew/.linuxbrew/bin/atuin \
 	/data/data/com.termux/files/usr/bin/atuin \
 	/usr/bin/atuin; do

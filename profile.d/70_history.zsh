@@ -1,5 +1,5 @@
 #!/bin/zsh
-# 70_history.zsh — atuin history hooks, interactive zsh (DR-016, DR-037).
+# 70_history.zsh — atuin history hooks, interactive zsh (DR-016, DR-037, DR-050).
 #
 # Gate: zsh only, interactive only. zsh has native precmd/preexec, so no
 # bash-preexec is involved — this is the healthy counterpart of the bash
@@ -18,11 +18,16 @@ esac
 # native preexec/precmd hooks, so no bash-preexec is needed.
 atuin_bin=""
 mise_attempted=""
+# mise hook-env can expose a standalone atuin binary from an install dir
+# without creating a shim; those still live under the trusted mise root.
+# (N) keeps an unmatched install-tree glob from tripping zsh NOMATCH.
 for cand in \
 	"${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims/atuin" \
 	"$HOME/.local/share/mise/shims/atuin" \
 	"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims/atuin" \
 	/usr/local/share/mise/shims/atuin \
+	"${XDG_DATA_HOME:-$HOME/.local/share}"/mise/installs/atuin/*/atuin-*/atuin(N) \
+	"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}"/installs/atuin/*/atuin-*/atuin(N) \
 	/home/linuxbrew/.linuxbrew/bin/atuin \
 	/data/data/com.termux/files/usr/bin/atuin \
 	/usr/bin/atuin; do
