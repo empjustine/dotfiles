@@ -1271,9 +1271,12 @@ eval — the spawn is the smaller half.
   service it is stopping. The warning is informational — nothing enables
   lingering from a shell, and the units remain inert without it after the
   last logout.
-- **Status note (2026-11-22):** the wrappers and the `fg`/`bg` paths forward
-  `"$@"` to `tmux attach`, so flags such as `-c`, `-d` and `-r` reach tmux;
-  `attach` has no positional shell-command argument.
+- **Status note (2026-11-22, corrected 2026-11-23):** the wrappers and the
+  `fg`/`bg` paths distinguish attach options from tmux commands. With no argv
+  or a leading attach flag such as `-c`, `-d` or `-r`, they start the profile
+  and attach to its session; with a command word they run it on the profile's
+  socket (`bgtmux source-file ~/.config/tmux/tmux.conf` is `tmux -L bgtmux
+  source-file ...`), without an implicit `attach`.
 
 ## DR-048 | A versioned tmux config refreshes the session environment on attach | Accepted (applied) | 2026-11-22
 

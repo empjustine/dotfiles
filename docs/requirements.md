@@ -145,8 +145,9 @@ default tooling path and default sourcing and add nothing on top.
   units, started under lingering at boot and pruned daily by
   `bin/tmux-profiles`; neither aliases nor shell-startup hooks start them
   (DR-046). The units restart a dead server, and `bin/fgtmux` / `bin/bgtmux`
-  warn before attaching when lingering is disabled (DR-047). Attaching
-  refreshes the session environment from the client (DR-048).
+  warn before attaching or running a tmux command on the profile when
+  lingering is disabled (DR-047). Attaching refreshes the session
+  environment from the client (DR-048).
 
 ## 4. Non-functional requirements / constraints
 

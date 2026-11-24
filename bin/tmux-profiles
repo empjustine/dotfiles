@@ -1,5 +1,5 @@
 #!/bin/sh
-# tmux-profiles — start, stop, attach and prune the two persistent tmux servers (DR-046, DR-047, DR-048).
+# tmux-profiles — start, stop, attach/run commands on, and prune the two persistent tmux servers (DR-046, DR-047, DR-048, DR-049).
 #
 # Gate: none — this is a command, not a sourced snippet; no shell-startup cost.
 # Touches: systemd user units where a user bus exists, tmux sockets otherwise;
@@ -14,7 +14,10 @@ BG_SOCKET=bgtmux
 BG_SESSION='jobs'
 BG_UNIT=tmux-bg.service
 TMUX_CONF="${DOTFILES:-$HOME/dotfiles}/config/tmux/tmux.conf"
-LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/bgterm"
+LOG_DIR="${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/bgterm}"
+if [ -z "$LOG_DIR" ]; then
+	LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/bgterm"
+fi
 WINDOW_MAX_AGE="${TMUX_WINDOW_MAX_AGE:-86400}"
 LOG_MAX_AGE="${TMUX_LOG_MAX_AGE:-7}"
 
@@ -123,8 +126,41 @@ upkeep() {
 			tmux -L "$BG_SOCKET" kill-window -t "$id"
 		done
 	[ -d "$LOG_DIR" ] || return 0
-	find "$LOG_DIR" -type f -name '*.log' -mtime "+$LOG_MAX_AGE" -delete
+	find "$LOG_DIR" -type f \( -name '*.log' -o -name '*.done' \) -mtime "+$LOG_MAX_AGE" -delete
 	find "$LOG_DIR" -type f -name '*.sh' -mtime +1 -delete
+	find "$LOG_DIR" -type d -empty -mtime +7 -delete
+}
+
+# No argv or leading attach flags attach to the profile session. Any other
+# first word is a tmux command (for example "source-file ...") and goes to the
+# same socket directly, so wrappers behave like "tmux -L <socket> <command>".
+use_profile() {
+	profile=$1
+	shift
+	socket=$(socket_for "$profile") || return 1
+	case ${1:-} in
+		'')
+			session=$(session_for "$profile") || return 1
+			start_one "$profile" || return 1
+			exec tmux -L "$socket" attach -t "$session"
+			;;
+		--)
+			shift
+			if [ $# -eq 0 ]; then
+				use_profile "$profile"
+				return
+			fi
+			exec tmux -L "$socket" "$@"
+			;;
+		-*)
+			session=$(session_for "$profile") || return 1
+			start_one "$profile" || return 1
+			exec tmux -L "$socket" attach -t "$session" "$@"
+			;;
+		*)
+			exec tmux -L "$socket" "$@"
+			;;
+	esac
 }
 
 service_one() {
@@ -178,11 +214,11 @@ case $action in
 	start | stop | status) for_profile "$action" "${1:-all}" ;;
 	fg)
 		warn_linger
-		start_one fg && exec tmux -L "$FG_SOCKET" attach -t "$FG_SESSION" "$@"
+		use_profile fg "$@"
 		;;
 	bg)
 		warn_linger
-		start_one bg && exec tmux -L "$BG_SOCKET" attach -t "$BG_SESSION" "$@"
+		use_profile bg "$@"
 		;;
 	upkeep) upkeep ;;
 	service)

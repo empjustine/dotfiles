@@ -1,5 +1,5 @@
 #!/bin/sh
-# fgtmux — attach to the interactive tmux profile, warning if lingering is off (DR-046, DR-047).
+# fgtmux — attach to, or run a tmux command on, the interactive tmux profile, warning if lingering is off (DR-046, DR-047).
 #
 # Gate: none — a command, not sourced. Touches: stderr warning plus the
 # tmux-profiles fg path; no state of its own.

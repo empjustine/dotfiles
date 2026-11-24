@@ -124,7 +124,7 @@ exactly what the `case "$-" in *i*)` gates protect (DR-017).
 | `src-dotfiles.sh` helpers | defined by the entrypoint, before the loop | 0 | one counter write in `$XDG_STATE_HOME/dotfiles/startups` when `df_startup` is called (interactive consumers only) | n/a — they *are* the guard (DR-043) |
 | `shortcuts/tasks/*.sh` | Termux:Widget task (never startup) | — | restart sshd / write `ip.json` | n/a — user-initiated |
 | `bin/tmux-profiles` | command / unit + timer `ExecStart`, never sourced | 0 at startup; a `sleep 5` poll while a unit is up, tmux calls and `find` on `upkeep` | tmux servers, their window/log pruning, stderr linger warning (DR-046, DR-047) | daily timer |
-| `bin/fgtmux`, `bin/bgtmux` | attach commands, never sourced | 0 at startup; one `loginctl` on attach | warning to stderr when `Linger=no` (DR-047) | user-initiated |
+| `bin/fgtmux`, `bin/bgtmux` | attach/command wrappers, never sourced | 0 at startup; one `loginctl` per invocation | warning to stderr when `Linger=no` (DR-047) | user-initiated |
 | `config/systemd/user/tmux-*` | systemd user manager (boot / daily), never sourced | 0 at startup | owns the two tmux cgroups, calls `upkeep`, restarts dead servers (DR-046, DR-047) | `OnCalendar=daily` (upkeep) |
 | `config/tmux/tmux.conf` | read by the tmux server when a profile is created, never sourced by a shell | 0 | refreshes session env from the attaching client (DR-048) | on attach |
 

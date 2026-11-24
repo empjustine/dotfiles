@@ -46,7 +46,7 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | `profile.d/80_path.sh` | PATH policy: wholesale reset (DR-014) except on cloud shells/Termux (DR-033), plus the repo's versioned `bin/` (DR-046) |
 | `profile.d/90_navigation.zsh` | xterm-256color keybindings (word-jump, Home/End/Delete) |
 | `bin/tmux-profiles` | the only interface to the two tmux profiles: `start`, `stop`, `status`, `fg`, `bg`, `upkeep`, `service`, `warn-linger`; unit and timer `ExecStart` (DR-046, DR-047) |
-| `bin/fgtmux`, `bin/bgtmux` | attach wrappers: warn when `Linger=no`, then delegate to `tmux-profiles fg`/`bg`, forwarding argv to `tmux attach` (DR-047) |
+| `bin/fgtmux`, `bin/bgtmux` | attach/command wrappers: warn when `Linger=no`, then delegate to `tmux-profiles fg`/`bg`; no args or attach flags attach to the profile session, a tmux command runs on its socket (DR-047) |
 | `config/systemd/user/tmux-fg.service` | `Type=simple` unit supervising `fgtmux` / `main`, restarted on failure (DR-046, DR-047) |
 | `config/systemd/user/tmux-bg.service` | same for `bgtmux` / `jobs`; the `keepalive` window holds the session open (DR-046, DR-047) |
 | `config/systemd/user/tmux-upkeep.service`, `tmux-upkeep.timer` | daily `tmux-profiles upkeep`: stale job windows and old logs (DR-046) |
