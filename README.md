@@ -34,6 +34,9 @@ This file is an index, not a content home (DR-035).
 | [research/termux-orchestration.md](docs/research/termux-orchestration.md) | which orchestration hypotheses survive on Termux/Android, measured (draft) |
 | [research/unraid-at-home-audit.md](docs/research/unraid-at-home-audit.md) | findings on extending upkeep to the Btrfs/Infisical/unraid-at-home hodgepodge (draft) |
 | [research/unraid-at-home-design.md](docs/research/unraid-at-home-design.md) | candidate declarative design and migration order for those findings (draft) |
+| [research/multi-uid-data-access.md](docs/research/multi-uid-data-access.md) | per-uid read-only/read-write access to the shared mount, rootless Podman, NFS/SFTP and the `systemd-homed` question (draft) |
+| [research/cross-host-systemd.md](docs/research/cross-host-systemd.md) | whether a distributed systemd control plane exists, and what fleet and Kubernetes teach (draft) |
+| [declarative-upkeep.md](docs/declarative-upkeep.md) | the proof-of-concept schema and manifests for steps, asserts, credentials and phases (draft) |
 
 ## Use
 

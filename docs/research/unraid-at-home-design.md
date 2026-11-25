@@ -60,8 +60,13 @@ luks-MEMBER3  UUID=<luks-uuid-3>  /etc/credstore.encrypted/luks-MEMBER3  noauto
 ```
 
 ```/etc/fstab
-UUID=<btrfs-fs-uuid>  /run/media/unraid  btrfs  noauto,x-systemd.requires=systemd-cryptsetup@luks-MEMBER1.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER2.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER3.service  0  0
+UUID=<btrfs-fs-uuid>  /var/mnt/unraid  btrfs  noauto,x-systemd.requires=systemd-cryptsetup@luks-MEMBER1.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER2.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER3.service  0  0
 ```
+
+Repository evidence points to `a95e1c63-...` as the filesystem/mount UUID
+(the tracked `open-by-uuid/` marker and the older `open.sh` mount it) and to
+`545db2db-...` as a possible fourth member that the current unlock scripts
+omit. Both still need the live `cryptsetup isLuks` check.
 
 The repeated `x-systemd.requires=` option is the important part: systemd's
 fstab generator adds both `Requires=` and `After=` for each named
@@ -115,7 +120,7 @@ privileged disk jobs out of the daily general manifest.
 | field | proposed meaning |
 | --- | --- |
 | `assert` | typed checks: `path_exists`, `path_is_mount_point`, `block_device_exists`, `command_exists`, `credential_present`; failure is loud, not a retry |
-| `credentials` | list of `{id, source}`; IDs only in the manifest; executor adds `-p LoadCredential=id:path` or `LoadCredentialEncrypted=` |
+| `credentials` | map of `{id: source}`; IDs only in the manifest; executor adds `-p LoadCredential=id:path` or `LoadCredentialEncrypted=` |
 | `steps` | serial `string[][]` within one job: one token set, one timeout, one executor, stop at first failure |
 | `phase` | optional `boot` / `maintenance` / `shutdown` label for selection and documentation; not a second scheduler |
 | `retries` | keep 0 for shutdown jobs; a failed unmount must be reported |

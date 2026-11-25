@@ -33,8 +33,13 @@ soon as one mapping is mounted is intentional. The mount succeeds on one member
 because the filesystem is shared; the script does not need to mount each mapper
 separately. The real requirement is that **all member mappings exist before
 that one mount**, and that one mount owns the filesystem. The "extra" UUID in
-`90-unmount-lock.sh` may be a filesystem/mount UUID rather than a fourth LUKS
-member; the repository alone cannot classify it.
+`90-unmount-lock.sh` is a filesystem/mount UUID rather than a fourth LUKS
+member. The earlier tracked tree settles it: `open-by-uuid/a95e1c63-...` is
+the mount marker used by `open.sh` (`udisksctl mount --block-device
+/dev/disk/by-uuid/a95e1c63-...`), while `luks2-by-uuid/` lists the members.
+That tree also carries `luks2-by-uuid/545db2db-...`, which the current
+scripts do not unlock; it is either a live fourth member or stale history,
+and the live host must decide with `cryptsetup isLuks`.
 
 ## What the scripts do now
 
@@ -159,8 +164,10 @@ container manager stops first.
 ## Open questions for the live host
 
 1. Which UUIDs are LUKS member devices, and which is the Btrfs filesystem UUID
-   or udisks mount label? Verify with `cryptsetup isLuks` and `findmnt`; do
-   not infer the fourth UUID from the shutdown script.
+   or udisks mount label? The tracked `luks2-by-uuid/` and `open-by-uuid/`
+   split answers the shape (`a95e1c63-...` mounts, the rest unlock), but the
+   live host must still verify each candidate with `cryptsetup isLuks` and
+   `findmnt`, including whether `545db2db-...` is a live fourth member.
 2. Is the installed Podman rootless with linger, or rootful? Where are the
    container storage and the bind-backed volumes?
 3. Is `/run/media/<user>/<uuid>` produced by udisks today, and is there any
