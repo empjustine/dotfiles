@@ -32,6 +32,32 @@ if command -v zsh >/dev/null 2>&1; then
 	done
 fi
 
+# Atuin >= 18.18 tags history entries with their originating shell and
+# `search.shells = "auto"` (the default) then hides zsh commands from bash
+# interactive search and vice versa. Set the shared view once at deploy time.
+# Use the same allowlisted discovery as 70_history.{bash,zsh} (DR-016) and let
+# Atuin edit its own config so comments/formatting survive.
+atuin_bin=""
+for cand in \
+	"${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims/atuin" \
+	"$HOME/.local/share/mise/shims/atuin" \
+	"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims/atuin" \
+	/usr/local/share/mise/shims/atuin \
+	"${XDG_DATA_HOME:-$HOME/.local/share}"/mise/installs/atuin/*/atuin-*/atuin \
+	"${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}"/installs/atuin/*/atuin-*/atuin \
+	/home/linuxbrew/.linuxbrew/bin/atuin \
+	/data/data/com.termux/files/usr/bin/atuin \
+	/usr/bin/atuin; do
+	[ -x "$cand" ] || continue
+	"$cand" --version >/dev/null 2>&1 || continue
+	atuin_bin="$cand"
+	break
+done
+if [ -n "$atuin_bin" ] && ! "$atuin_bin" config set search.shells all; then
+	printf '%s\n' "deploy: atuin config set search.shells all failed" >&2
+fi
+unset atuin_bin cand
+
 # Termux-only: scaffold the Termux:Widget/Boot directories (chmod 700,
 # empty except for the task scripts below) and copy the background-task
 # scripts into ~/.shortcuts/tasks. Unlike the rc entrypoints these are

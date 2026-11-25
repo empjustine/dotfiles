@@ -224,6 +224,11 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
 - **Status note (2026-11-18, DR-038):** still env-var-only, but split by intent
   into `70_moratorium.sh` (delay), `72_hardening.sh` (refusal) and `10_env.sh`
   (cosmetics) so no file mixes two policies again.
+- **Status note:** narrow exception: `deploy.sh` now runs the allowlisted
+  `atuin config set search.shells all` so Atuin's interactive search does not
+  hide bash history from zsh and vice versa. The dotfiles still never rewrite
+  tool config directly; Atuin edits its own file with its comment-preserving
+  CLI, and no other tool config is mutated at deploy time.
 
 ## DR-012 | `VIRTUAL_ENV_DISABLE_PROMPT=1` | Accepted, not applied | 2025-12-02
 
@@ -1299,6 +1304,42 @@ eval — the spawn is the smaller half.
   The dedicated sockets mean this config replaces, rather than merges with,
   any personal `~/.tmux.conf` for these two profiles.
 
+## DR-049 | A resource-constrained DAG replaces `wait` barriers in upkeep | Accepted (applied) | 2026-11-22
+
+- **Context:** `-upkeep-everything.sh` used two global `wait` barriers, while
+  several of its children spawned their own concurrency. Exit statuses were
+  swallowed by the trailing `sleep 29`, and there was no way to say "one disk
+  job, two network jobs at a time" or to separate a tool's download phase
+  from its disk phase.
+- **Decision:** `config/upkeep/jobs.json` declares leaf jobs with dependencies,
+  resource demands, timeouts and retries. `bin/upkeep-everything-2.py` sorts
+  the graph, starts a ready job only when every resource token is free, and
+  releases tokens when `bin/upkeep-run-one` writes its `.done` file. Each job
+  is a `bgtmux` window when that profile is available, otherwise a local
+  subprocess; `plan`, `run NAME`, `--local`, `--hold` and `--retry-delay` cover
+  inspection, selection and testing. `rpm-ostree` is split into
+  `update --download-only` (net) → `update --cache-only` (disk) → cleanup;
+  Homebrew into update → upgrade → clean; flatpak into per-scope update →
+  clean; each Termux host into `pkg autoclean` → `pkg update -y` →
+  `pkg upgrade --assume-yes`; each Oracle host into services → swap → dnf →
+  reapply → network → containers via `bin/oracle-step`. The old scripts stay
+  in the checkout as rollback material.
+- **Consequences:** concurrency is a property of declared resources, not of
+  shell shape; a failure skips its descendants instead of being hidden by a
+  `wait`, and retries/timeouts are explicit. The manifest is trusted input
+  executed through `sh -c`. Resource tokens are local to one allocator run —
+  two concurrent `upkeep-everything-2.py` invocations do not coordinate; a
+  follow-up can add a run-level lock if that becomes a problem.
+- **Status note (2026-11-22):** capacities retuned — only the four host
+  tokens stay at 1; `disk`, `net` and `extdisk` are 2. The `podman-build` leaf
+  is now `podman-pull` → `podman-build`, followed by the `extdisk` chain
+  `syncthing` → `transmission`. Remote Termux and Oracle jobs no longer claim
+  local `net` or `remote-disk`: their per-host token is the only constraint.
+  The two fast VPN steps (`warp-off`, `globalping-stop`) declare no resources.
+- **Status note (2026-11-23, DR-051):** the string commands, local host aliases
+  and immediate retry policy described here are superseded by DR-051. The DAG
+  with weighted resource tokens remains the scheduler model.
+
 ## DR-050 | Trust mise install-tree atuin binaries as well as shims | Accepted (applied) | 2026-11-22
 
 - **Context:** an interactive shell reported "atuin is on `$PATH` but in no
@@ -1322,3 +1363,106 @@ eval — the spawn is the smaller half.
   default, so the install-tree patterns in `70_history.zsh` carry the `(N)`
   glob qualifier — a missing tree contributes no candidate instead of
   breaking the shell startup.
+
+## DR-051 | The upkeep allocator gets structured jobs, explicit hosts and FIFO retries | Accepted (applied) | 2026-11-23
+
+- **Context:** DR-049 replaced the shell's `wait` barriers with a DAG, but its
+  manifest still stored whole commands as shell strings, used local aliases
+  such as `host:moto` next to commands naming `_moto_x4._termux`, and retried a
+  failed job before other jobs waiting on the same resources. A failed parent
+  with a pending child could also make the scheduler report a false deadlock
+  before the retry delay elapsed. The Oracle split was half-done: the new jobs
+  called `bin/oracle-step`, while the monolith stayed live in the old script.
+  The pane hold was recorded before the hold finished, and the marker
+  directory lived on persistent state with no cleanup on the stuck path.
+- **Decision:** `config/upkeep/jobs.json` now declares `argv` arrays, never
+  shell command strings. String fields use a tiny substitution language:
+  `${NAME}` from a fixed env/builtin map, `$$` for a literal dollar, and a hard
+  error for any other `$`. A bare `~` is an ordinary character. Entries may
+  carry `hosts: [...]`, which fans the entry out into one concrete job per
+  full SSH host; `${host}` is expanded in `name` and `after` so each host keeps
+  its own chain. `host:` tokens are derived from the full SSH host, not from a
+  second alias vocabulary. Resources are weighted (`{"extdisk": 2}`);
+  `transmission` has no dependency and consumes both `extdisk` tokens while it
+  starts. Failures release their tokens, receive a new FIFO ticket plus a
+  short retry delay, and are considered only after jobs already queued on
+  their resources; descendants are skipped only after retries are exhausted.
+  Jobs with `host` are executed by the updater itself via `ssh -o BatchMode=yes
+  -- <host> <shlex.join(argv)>`; jobs with `script` pipe a local POSIX script
+  to `ssh <host> sh -s -- ...`. Composite Oracle steps live in
+  `bin/upkeep-remote/`, the one local composite build lives in
+  `bin/upkeep-local/`, and neither `bin/oracle-step` nor the old monolith is
+  part of the new flow. Port 3322 setup is deprecated and is not carried over.
+  Run markers move to `$XDG_RUNTIME_DIR/bgterm/run-*` with a state-home
+  fallback; tmux panes are tracked by window ID, not by truncated name.
+- **Consequences:** the manifest is data, not a shell program; quoting and
+  word-splitting problems disappear, and `plan` can validate every reference
+  before anything starts. Full SSH targets in the manifest must match
+  `~/.ssh/config`. `~` in a path is literal — use `${HOME}` when home is
+  meant. Retries can no longer starve ready jobs or falsely deadlock a graph.
+  Local globalping-probe needs interactive sudo, so `warp-up`/`warp-down` stay
+  manual helpers: automatic `warp-off` only disconnects, the old
+  `globalping-stop` leaf is gone from the DAG, and neither gates transmission
+  or syncthing. The old scripts remain as rollback material and
+  keep their existing noise until removed.
+- **Status note (2026-11-23):** journald gives a bounded per-UID user journal
+  (`Storage=volatile` plus `RuntimeMaxUse` for a RAM ring) and a per-unit
+  *view* via `journalctl --user -u`, but no per-user-unit storage buffer;
+  `LogNamespace=` is system-manager-only. Moving jobs to transient
+  `systemd-run --user` units with journal-follow panes remains an attractive
+  follow-up, but it needs host-level journald policy and is not applied here.
+- **Status note (2026-11-23, DR-052):** the systemd executor and journal
+  follower are now applied. The marker runner is a fallback, and scripts are
+  embedded with `sh -c` rather than piped to `sh -s`.
+
+## DR-052 | Transient user units and journal followers become composable modules | Accepted (applied) | 2026-11-23
+
+- **Context:** DR-051 left the systemd migration deferred: journald gives a
+  bounded per-UID journal and a per-unit *view*, but no per-user-unit storage
+  buffer (`LogNamespace=` is system-manager-only). The allocator still had one
+  monolithic path, and `bin/upkeep-run-one` parsed its own options by hand.
+  Piping a script to `ssh host sh -s` also needed `systemd-run --pipe`,
+  which would take the service's stdout away from the journal.
+- **Decision:** command construction moves to `bin/upkeep_cmd.py`, shared by
+  both executors; `bin/upkeep_systemd_exec.py` runs one prepared argv as a
+  transient user unit with `--collect --wait`, `RuntimeMaxSec`, session
+  env passthrough and propagated exit status; `bin/upkeep_journal_follow.py`
+  follows `journalctl --user -u UNIT --follow --no-tail` and exits shortly
+  after the unit goes inactive. The allocator composes the two when a user bus
+  exists: journal logs replace `.done`, and a tmux pane is only a follower —
+  it never owns the unit. Without systemd, `--local` and the marker runner
+  remain. Scripts are embedded as POSIX shell bodies via `sh -c` rather than
+  piped over stdin, so journal capture stays intact. `upkeep-run-one` now
+  uses `argparse` with options before STATE/JOB and `--` before ARGV.
+- **Consequences:** each run gets unique unit names containing the run id and
+  attempt; retries and fan-out no longer mix logs. Journal access is
+  `journalctl --user -u upkeep-...`; the previous log/.done run directory
+  is only used by the fallback. The follower's short settle grace exists to
+  drain the last journal lines, not to hold a finished job open. The per-user
+  journal is still one bounded ring, not a per-unit buffer.
+- **Status note (2026-11-23):** DR-051's "pipe a local POSIX script to
+  `sh -s`" wording is superseded by the embedded `sh -c` transport above;
+  the manifest stays shell-free either way.
+
+## DR-053 | All four systemd/tmux backend states are first-class | Accepted (applied) | 2026-11-23
+
+- **Context:** DR-052 covered systemd with an optional journal-follow pane,
+  but the remaining fallback still ran local subprocesses in parallel with
+  their output discarded. That missed the tmux-only state (GUI terminal panes
+  are the observability) and the no-service state (the current terminal is the
+  only observability). The manifest also still asked jobs to spell out empty
+  `after`, empty `resources` and repeated identical `timeout`/`retries`.
+- **Decision:** the allocator picks one of four composed backends:
+  systemd+tmux (transient units plus journal-follow panes), systemd only
+  (journal logs, no pane), tmux only (marker runner in 30-second panes), and
+  neither (serial execution in the current terminal). `--local` forces the
+  last state. Console mode starts one job at a time regardless of tokens and
+  inherits stdout/stderr; it has no hold and no marker file. The manifest gets
+  a top-level `defaults` object with `timeout` and `retries`; `after`,
+  `resources`, `timeout` and `retries` may be omitted per job.
+- **Consequences:** the same DAG and command shape works on every host, with
+  observability degrading predictably instead of disappearing into
+  `/dev/null`. The tmux-only fallback keeps the old pane hold; console mode
+  trades concurrency for direct visibility. Shorter manifests state only what
+  differs from the defaults. Unknown default keys and invalid values are
+  manifest errors at `plan` time.

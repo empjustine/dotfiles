@@ -27,6 +27,12 @@ This file is an index, not a content home (DR-035).
 | [DECISIONS.md](DECISIONS.md) | the dated decision log — the single source for every DR-### cite |
 | [known-issues.md](docs/known-issues.md) | documentation drift that is known and not yet fixed |
 | [spec-standard.md](docs/spec-standard.md) | the frontmatter contract over these files, and the gate that enforces it |
+| [research/overview.md](docs/research/overview.md) | prior-art research and reuse options for declarative upkeep (draft) |
+| [research/guards-and-steps.md](docs/research/guards-and-steps.md) | guards, typed conditions, and serial step semantics (draft) |
+| [research/files-and-volumes.md](docs/research/files-and-volumes.md) | tmpfiles, Kubernetes PVCs, Podman volumes, Quadlet and out-of-home storage (draft) |
+| [research/upkeep-mapping.md](docs/research/upkeep-mapping.md) | the concrete mapping from the current upkeep scripts to steps and volumes (draft) |
+| [research/unraid-at-home-audit.md](docs/research/unraid-at-home-audit.md) | findings on extending upkeep to the Btrfs/Infisical/unraid-at-home hodgepodge (draft) |
+| [research/unraid-at-home-design.md](docs/research/unraid-at-home-design.md) | candidate declarative design and migration order for those findings (draft) |
 
 ## Use
 

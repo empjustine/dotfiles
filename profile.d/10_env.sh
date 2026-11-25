@@ -16,5 +16,9 @@ fi
 # reader should not have to decide whether it is.
 NPM_CONFIG_FUND="false"
 PIP_DISABLE_PIP_VERSION_CHECK=1
+PYTHONDONTWRITEBYTECODE=1
+# Ruff otherwise writes .ruff_cache into every project root. A pre-set
+# RUFF_CACHE_DIR (an explicit project choice) wins.
+RUFF_CACHE_DIR="${RUFF_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/ruff}"
 UV_INIT_BARE="1"
-export NPM_CONFIG_FUND PIP_DISABLE_PIP_VERSION_CHECK UV_INIT_BARE
+export NPM_CONFIG_FUND PIP_DISABLE_PIP_VERSION_CHECK PYTHONDONTWRITEBYTECODE RUFF_CACHE_DIR UV_INIT_BARE

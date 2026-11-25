@@ -34,7 +34,7 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | file | role |
 |---|---|
 | `src-dotfiles.sh` | unified POSIX entrypoint and the whole implementation of the run-guard (`df_startup` / `df_due` / `df_stamp`, DR-043): re-entrancy guard, helpers, `profile.d/` loop. Copied verbatim to the rc targets by `deploy.sh`, so it stays self-contained |
-| `profile.d/10_env.sh` | environment switches that are neither policy nor PATH: `ANDROID_HOME`, `NPM_CONFIG_FUND`, `PIP_DISABLE_PIP_VERSION_CHECK`, `UV_INIT_BARE` (DR-038 split) |
+| `profile.d/10_env.sh` | environment switches that are neither policy nor PATH: `ANDROID_HOME`, `NPM_CONFIG_FUND`, `PIP_DISABLE_PIP_VERSION_CHECK`, `PYTHONDONTWRITEBYTECODE`, `RUFF_CACHE_DIR`, `UV_INIT_BARE` (DR-038 split) |
 | `profile.d/10_wsl2.sh` | WSL2 plumbing: `XDG_RUNTIME_DIR` normalization, then (interactive, one per-boot stamp) tmpfs ownership, `fstrim /`, shared-root propagation, cross-distro bind mount, gnome-keyring (DR-007, DR-038) |
 | `profile.d/20_core.bash` | sources the distro/cloud/system bashrc (`/etc/bashrc`, `/etc/bash.bashrc`, Termux profile, Google/Oracle cloud bashrc) (DR-020) |
 | `profile.d/40_completion.{bash,zsh}` | tab completion: bash-completion framework / `compinit`, brew shellenv, mise activate, uv/uvx, kubectl — identical allowlist cascade + mise-shim trust gate in both (DR-021, DR-026, DR-038) |
@@ -53,7 +53,7 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | `config/tmux/tmux.conf` | server options for both profiles: `update-environment` list refreshed from the attaching client (DR-048) |
 | `shortcuts/tasks/sshd.sh` | Termux:Widget background task — restart sshd and toast its status (was embedded in `termux-shortcuts.html`); copied verbatim to `~/.shortcuts/tasks/sshd.sh` by `deploy.sh` (DR-036) |
 | `shortcuts/tasks/ip.sh` | Termux:Widget background task — **sole producer of `ip.json`** for Markor, plus a toast of the primary IPv4 (DR-009, DR-036, DR-038); copied to `~/.shortcuts/tasks/ip.sh` by `deploy.sh` |
-| `deploy.sh` | copies `src-dotfiles.sh` onto the rc targets (zsh targets only when zsh exists); Termux:Widget dir scaffolding + `shortcuts/tasks/*.sh` background tasks (DR-036) |
+| `deploy.sh` | copies `src-dotfiles.sh` onto the rc targets (zsh targets only when zsh exists); sets `search.shells = "all"` via an allowlisted `atuin` (DR-016); Termux:Widget dir scaffolding + `shortcuts/tasks/*.sh` background tasks (DR-036) |
 | `lint.sh` | `shfmt` + `shellcheck` over `*.sh`/`*.bash`, `zsh -n` over `*.zsh`, then the docs gate; truncates `report.txt` per run, exits non-zero on findings |
 | `docs/spec-check.mjs` | the documentation gate: frontmatter graph, DR citations, links/anchors/§ cites, inventory vs tree (DR-042, [spec-standard.md](spec-standard.md)) |
 | `embed.mjs` / `unembed.mjs` | embed files into a self-contained HTML page / extract them back |
@@ -191,8 +191,11 @@ Per-environment behavior:
   symlinked — each stays self-contained). On Termux it additionally copies
   `shortcuts/tasks/{sshd,ip}.sh` into `~/.shortcuts/tasks/` (DR-036). On
   systemd hosts with tmux and a user bus it also copies
-  `config/systemd/user/tmux-*` (DR-046). The one supported shell extension
-  point is `~/dotfiles/profile.d/`; `bin/` is consumed from the checkout.
+  `config/systemd/user/tmux-*` (DR-046). When an allowlisted `atuin` exists it
+  also runs `atuin config set search.shells all` so history from bash and zsh
+  stays visible in one interactive-search view (DR-016). The one supported
+  shell extension point is `~/dotfiles/profile.d/`; `bin/` is consumed from
+  the checkout.
 - **Lint:** `lint.sh` runs `shfmt --write --indent 0 --binary-next-line
   --case-indent` and `shellcheck --check-sourced --external-sources
   --severity=style --enable=all --exclude=SC2292,SC2250` over

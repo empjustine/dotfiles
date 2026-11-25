@@ -257,12 +257,14 @@ KUBECONFIG separator.
   `%LOCALAPPDATA%`, `scoop`, MSYS/Cygwin branches, `;` list separators) —
   DR-038.
 - The stock per-user PATH dirs are never re-added by the reset (DR-033).
-- `deploy.sh` only ever copies `src-dotfiles.sh` (plus zsh targets) and the
-  `shortcuts/tasks/*.sh` background tasks (Termux-only; DR-036); it does
-  not copy `profile.d/` — extending it would risk
-  stale copies on previously-provisioned hosts (DR-016). It now also
-  copies `config/systemd/user/tmux-*` on systemd hosts (DR-046); `bin/`
-  and `profile.d/` stay in the checkout.
+- `deploy.sh` copies `src-dotfiles.sh` (plus zsh targets), the
+  `shortcuts/tasks/*.sh` background tasks (Termux-only; DR-036) and
+  `config/systemd/user/tmux-*` on systemd hosts (DR-046); it does not copy
+  `profile.d/` — extending it would risk stale copies on previously-provisioned
+  hosts (DR-016). Its one tool-config write is the allowlisted
+  `atuin config set search.shells all`, which keeps bash/zsh history in one
+  interactive-search view; Atuin owns that edit, so user comments survive.
+  `bin/` and `profile.d/` stay in the checkout.
 - Snippet scratch variables are unset/removed on scope exit (DR-019, DR-034).
 - Work that mutates *world* state (mounts, fstrim, keyring, history merge,
   generated completion blobs) is pre-checked, stamp-gated or throttled via
