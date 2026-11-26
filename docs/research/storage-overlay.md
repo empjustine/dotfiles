@@ -84,7 +84,7 @@ The earlier draft's wording is kept where it still applies.
 | --- | --- | --- | --- |
 | R1 | file-level encryption over plain files | one encrypted object per file plus a per-directory manifest that is itself a plain file | chunk stores, packing, cluster namespace |
 | R2 | per-folder/per-object keys, need-to-know | root key → per-workload KEK → per-object DEK; a local key daemon selects by caller | KMS service, per-client agents, network auth |
-| R3 | FEC plus redundant copies | copies across failure domains for availability; per-block hashes for integrity; PAR2-style parity over the ciphertext (~10 % overhead) for bitrot | EC across servers, rack-aware layout, k+m shard tables |
+| R3 | FEC plus redundant copies | copies across failure domains for availability; per-segment ciphertext digests for identity and repair; PAR2-style parity over the ciphertext (~10 % overhead) for bitrot | EC across servers, rack-aware layout, k+m shard tables |
 | R4 | restore from alternatives, verifiably | a verifier that walks manifests, checks roots and block hashes, restores any object from any copy, repairs bitrot from its parity, and reports what is unrecoverable | replication topology, per-server chunk maps |
 | R5 | parallel ops over cold cloud and slow USB SMR | two queue classes with per-device concurrency, and one upload/download queue per provider | global scheduler, cluster load balancing |
 | R6 | dynamic expansion and removal | drain a device: copy, verify, wipe; no rebalance across nodes | device removal inside a multi-device filesystem, CRUSH |
@@ -109,7 +109,7 @@ right bytes without ever holding the key.
 | job | what answers it | what it cannot answer |
 | --- | --- | --- |
 | availability | copies in independent failure domains | which copy is correct |
-| integrity | authenticated ciphertext plus per-block hashes | which block is bad, until it is verified |
+| integrity | authenticated ciphertext (keyed) plus per-segment ciphertext digests (keyless) | which segment is bad, without the key |
 | bitrot repair | PAR2/PAR3 parity over the ciphertext, ~10 % overhead | a deleted or largely missing object |
 | space | nothing — parity costs 10 %, a second copy costs 100 % | any of the above |
 
@@ -141,6 +141,43 @@ failure domain: a lost device takes the object and its parity together, and a
 copy is still the only thing that survives that. The composition is:
 **copies for availability, authenticated ciphertext for integrity, PAR2 for
 bitrot, and no erasure coding across domains.**
+
+### AEAD, digests and what each one proves
+
+The encryption is AEAD, so it *does* authenticate the segment it just read —
+with the key, and only within the scope the associated data declares. A digest
+is not a second authenticity check; it answers different questions. Keeping the
+two apart is what prevents both an unnecessary plaintext hash and a false sense
+of freshness.
+
+| mechanism | key needed | proves | cannot prove |
+| --- | --- | --- | --- |
+| per-segment AEAD tag | yes | these bytes were produced under this key for this object, version, segment index and count, when the AAD binds them; any change fails closed | freshness; which of two authentic copies is current; anything at all to a holder without the key |
+| per-segment ciphertext digest | no | the exact bytes expected at this index; which segment is bad | authenticity — a digest can be recomputed by anyone |
+| whole-object ciphertext digest (root over the segment digests) | no | this is exactly the committed object, and two copies match | freshness without an anchored version; that the plaintext is the right plaintext |
+| PAR2 block hash | no | a repair produced the right ciphertext block | authenticity |
+| signed manifest head and monotonic version | owner key | the object-to-digest mapping is current, and an old consistent tree is a replay | plaintext correctness |
+
+Three consequences:
+
+- **Per-segment AEAD, not one tag for the file.** A single whole-file tag would
+  force reading and verifying the entire object before serving the first byte.
+  Per-segment tags keep random access, provided the AAD binds the object id,
+  version, segment index and segment count — without those, truncation,
+  reordering and mix-and-match all look authentic.
+- **The digest is over the ciphertext.** That is what makes it checkable
+  without the key: a blind restorer recomputes it, PAR2 hashes the same bytes,
+  and two copies can be compared. A digest over the plaintext would need the
+  key, would leak equality if it were ever used as an id, and is redundant for
+  authenticity because the AEAD tag already covers those bytes.
+- **The digest is identity, not authenticity.** It says "these are the bytes
+  this object should be", not "someone holding the key made them"; and alone it
+  says nothing about freshness. The signed head with a monotonic version
+  supplies the missing part.
+
+If a plaintext digest is kept at all, it belongs inside the encrypted header —
+useful for comparing a restore to its source during a migration, never exposed
+as an id.
 
 ## The index and where it lives
 
@@ -230,7 +267,7 @@ Six pieces, one process boundary, four optional fronts.
 
 | piece | job | smallest implementation |
 | --- | --- | --- |
-| object format | one file → header + ciphertext (+ optional PAR2 set) + manifest entry | versioned header, AEAD, AAD binding id/version/name/length, extent Merkle |
+| object format | one file → header + ciphertext (+ optional PAR2 set) + manifest entry | versioned header, AEAD with AAD binding id/version/segment index and count/name/length, Merkle root over segment ciphertext digests |
 | index | resolve object, copies, keys, state | SQLite cache over manifests; optionally replicated encrypted to a managed store |
 | key daemon | hold the root key, unwrap KEKs, select by caller | systemd service, credential-loaded root key, unix socket, uid check |
 | backends | read/write on each medium | adapter per class: local dir, USB/SMR append-only pack, S3-compatible, cold |
@@ -333,7 +370,7 @@ engine design would otherwise guess at, and it is reversible.
   derivable or authoritative and which managed store holds it; whether the
   provider is trusted, TEE-attested, or ciphertext-only; which workloads are
   allowed below `object`.
-- **Artifacts:** object and manifest format with extent Merkle and a test
+- **Artifacts:** object and manifest format with a ciphertext digest tree and a test
   vector; key-wrap format; backend capability profile (rename, conditional PUT,
   `fsync`, max object size, latency, cost, write pattern); commit/GC protocol;
   scrub/repair protocol with a partial-recovery report; tier state machine;

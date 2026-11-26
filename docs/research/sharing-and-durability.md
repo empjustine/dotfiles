@@ -208,11 +208,11 @@ spends storage and CPU to protect bytes that are already protected, and it
 makes the outer layer fight the inner one.
 
 So `-single` says: apply the encryption layer, store one copy, and stop. The
-engine still records the content hash, so bitrot is **detected** and reported —
-it is simply not repaired locally, because the inner format already knows how
-to do that. It also suppresses the background upload and the lazy parity that a
-default policy would otherwise schedule; that was the mistake in the earlier
-draft, which kept them "best effort".
+engine still records the ciphertext digest, so bitrot is **detected** and
+reported — it is simply not repaired locally, because the inner format already
+knows how to do that. It also suppresses the background upload and the lazy
+parity that a default policy would otherwise schedule; that was the mistake in
+the earlier draft, which kept them "best effort".
 
 `-single` is not a silent fallback. A `-c<N>` folder whose domains are missing
 fails its writes; the operator writes `-single` to make the downgrade explicit,
@@ -256,8 +256,8 @@ For an object under `-c<N>`, `fsync` returns only after all of:
 3. with `-fec`, each copy's parity set is computed over that copy's final
    ciphertext, written, and durable; the manifest records the set id and the
    block hashes;
-4. the manifest entry — policy, root hash, per-copy locators, parity reference
-   — is written atomically (rename or conditional PUT) and durable.
+4. the manifest entry — policy, ciphertext digest, per-copy locators, parity
+   reference — is written atomically (rename or conditional PUT) and durable.
 
 For `-single`, only steps 1 and 4 run: the local object and the manifest. No
 copy, no parity, no background job.
@@ -274,6 +274,12 @@ surviving object**, and its shape follows from that:
 - **Order.** Encrypt → object → parity over the ciphertext → manifest. Parity
   over plaintext would leak linear combinations and would need the key to
   check.
+- **Two different checks, two different keys.** The AEAD tag is the authenticity
+  check and needs the workload key: it says "these bytes were made by the key
+  holder for this object, version and segment". The digest is the identity
+  check and needs nothing: it says "these are the bytes this object should be".
+  Authentication without the key is impossible; identity without the key is the
+  point of storing the digest over the ciphertext.
 - **Blind verification.** A PAR2 set carries the file size, per-block hashes
   and the set id, so `par2 verify` decides whether an object is intact and
   whether a repair produced the right bytes — without the key and without
@@ -348,6 +354,11 @@ should be.
   older than a threshold, and objects whose parity set is itself damaged.
 - `par2 verify` is the blind check: it needs the object and the parity set, not
   the key, and its output is quotable in an incident report.
+- Three states are reported separately, because they answer different
+  questions: the **digest** matches (identity, no key needed), the **AEAD tag**
+  verifies (authenticity, key needed, on read), and the **parity** can repair
+  the object (bitrot, no key needed). A report that collapses them hides which
+  guarantee is actually missing.
 - Metrics: `fsync` latency by policy, pending commits, failed commits by
   reason, bytes written per domain, repaired blocks, unrecoverable objects.
 
