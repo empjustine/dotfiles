@@ -17,8 +17,9 @@ with k3s/k0s, whether nesting adds anything, and what distribution over more
 machines does to security.
 
 Claims about the VMMs are read from the vendored trees (Firecracker, Cloud
-Hypervisor, libkrun, Kata, Kuasar, microvm.nix, Keylime), the kernel's nested
-KVM documentation, and the earlier notes in this tree. Nothing was run.
+Hypervisor, libkrun, Kata, Kuasar, microvm.nix, Keylime), the sandbox projects
+(Gondolin, smolvm, crun and crun-vm), the kernel's nested KVM documentation,
+and the earlier notes in this tree. Nothing was run.
 
 ## The boundary is orthogonal to the storage core
 
@@ -84,6 +85,106 @@ Three rules follow.
 - **Confidential guests change the arithmetic.** They put the host outside the
   guest's TCB, which is the only way to answer the storage note's open question
   without a second machine — at the cost of the SNP limitations above.
+
+## Sandbox projects: Gondolin, smolvm and krun
+
+Three projects turn "microVM for untrusted work" into a product. They share a
+premise that is the *opposite* of the storage note's open question: the host is
+trusted and the guest is adversarial. That makes them excellent prior art for
+workload isolation and poor fits for "host root is outside the model".
+
+### What each one is
+
+| project | shape | boundary | mediation | state |
+| --- | --- | --- | --- | --- |
+| **Gondolin** (earendil-works) | TypeScript SDK + CLI, Rust daemon `gondolind`, guest Alpine, libkrun default and QEMU fallback | hardware microVM, guest treated as adversarial | userspace netstack: allowlist, internal-range blocking, DNS modes, HTTP/1.1 TLS interception, SSH egress proxy, mapped TCP; placeholder secrets substituted by the host per allowed host; programmable VFS (FUSE over virtio-serial, or virtio-fs) | disk-only qcow2 checkpoints (no RAM); remote daemon over SSH |
+| **smolvm** (smol-machines) | CLI + Node/Python/Rust/Go SDKs, bundled libkrun, OCI images, local and cloud transports | hardware microVM per workload; the `smol-vmm` helper is confined by seccomp and Landlock on Linux | networking **off by default**, `allow_hosts`, a mediated-egress decider (allow/deny/redirect, no TLS inspection), credential substitution into headers or form bodies, explicit volumes and sockets | full checkpoints (RAM, CPU, disks), live copy-on-write branches, portable `.smolmachine` packs, cross-arch Mac to Linux |
+| **krun** (crun) | `krun` is a symlink to `crun`; Podman runs an OCI container inside a libkrun microVM | hardware microVM with the container's namespaces and cgroups set up first | networking in TSI (default, socket proxy), passt or TAP; virtio-blk, virtio-fs, virtio-console | the container's, no VM-level checkpoint |
+
+Three names collide here and should not be conflated. `podman machine
+--provider libkrun` is Podman's own host VM on macOS, not workload isolation.
+`crun`'s `krun` mode is the OCI container in a microVM. `crun-vm` is a third
+thing: an OCI runtime that boots full QEMU VM images with cloud-init or
+Ignition, for bootable containers — prior art, not this boundary.
+
+### What they actually promise
+
+| promise | Gondolin | smolvm | krun |
+| --- | --- | --- | --- |
+| guest code does not run on the host kernel | yes | yes | yes |
+| egress confined by policy | yes, deep: HTTP/1.1 parsing and TLS interception, DNS modes, no generic NAT | yes, coarse: allowlist and a per-flow decider | no policy of its own; whatever the host network and Podman give it |
+| the guest can use a secret without reading it | yes, placeholders substituted per host | yes, placeholders in headers or form bodies | no |
+| host filesystem hidden unless granted | yes, every mount is a host-side provider | no — a mounted directory is plaintext to the guest and the host | yes via virtio-fs, host-mediated |
+| state can be snapshotted | disk only | RAM + CPU + disks, and branched | no |
+| explicit non-goals | malicious host, malicious local user, VM escape, side channels, DoS | not a multi-user control plane; the invoking user is in the TCB; releases are checksummed but not signed | inherits libkrun's device model and TSI caveats |
+
+Two things are worth stating plainly.
+
+First, **all three are "guest adversarial, host trusted"**. Gondolin says the
+host process, the daemon and the machine are trusted; smolvm says the invoking
+user, the host OS, libkrun and smolvm are in the TCB; krun inherits whatever
+the host grants. None of them answers "can the host read my data?" — the host
+mediates the plaintext, by design. If the storage design's answer is "the host
+must not read", the guest still has to hold the key (previous section), and
+these projects are about the *other* direction.
+
+Second, **libkrun's own security model bounds all of them**. The VM boundary
+does not restrict host resources exposed through devices; the virtio-fs export
+path is not a sandbox; TSI proxies sockets with the VMM's host identity and can
+reach the VMM's Unix sockets. A product can add policy on top, as Gondolin and
+smolvm do, but it cannot exceed the boundary underneath.
+
+### What is most promising to study
+
+1. **Gondolin's I/O mediation triad** — deny-by-default egress, placeholder
+   secrets bound to hosts, and a fully programmable filesystem — is the most
+   reusable idea in the three. It is the network-layer analogue of the storage
+   note's key daemon: the workload holds a handle it can use but not read, and
+   the policy point decides when the real value appears. Its `security.md`
+   shape (goals, non-goals, trust assumptions, guarantees, safe envelope) is
+   also the right template for any isolation claim this tree makes.
+2. **Gondolin's control plane over virtio-serial**, not a network service, is a
+   small attack surface worth copying: the guest cannot dial a host port, and
+   the host's authority is a pair of pipes it owns.
+3. **smolvm's VMM confinement**: running the VMM as a separate `smol-vmm`
+   helper under seccomp and Landlock means a guest escape lands in a confined
+   process rather than in the application. That is cheap defence in depth and
+   independent of which VMM is used.
+4. **smolvm's defaults** — networking off, every mount, socket and port is
+   explicit authority, guest root is untrusted — match the ladder's default
+   deny and are the right posture for this host.
+5. **krun's OCI integration** is the cheapest way to give one workload a VM
+   boundary without changing the orchestrator: the image stays an OCI image,
+   the lifecycle stays a Podman container, and only the runtime changes (with
+   the Quadlet `.service` caveat above).
+6. **smolvm's branch and checkpoint** is the standout feature for agent
+   workflows — rewind a running machine, branch it copy-on-write — and the
+   least relevant to a storage node.
+
+### What to hold as prior art
+
+- **Gondolin itself**: the userspace netstack, TLS interception, VFS provider
+  protocol and Alpine-only image builder are a coherent design but far more
+  machinery than a home pool should run, and the TLS MITM means host-trusted by
+  construction. Study the pattern, do not deploy the product.
+- **smolvm's cloud transport, pack format and branching**: excellent for agent
+  development and stateful sandboxes; alpha software, unsigned releases, and a
+  different problem from durable storage.
+- **crun-vm**: full VM images as containers, QEMU and cloud-init. A useful
+  reference for "a VM as a Podman workload", not for microVM isolation.
+- **`podman machine --provider libkrun`**: the macOS host VM. It shows libkrun
+  is production-adjacent inside Podman, nothing more.
+
+### The result for this host
+
+- For one workload that must be isolated now: `crun`'s `krun`, a `.service`
+  with `podman run --runtime=krun`, networking through passt or TAP rather than
+  TSI, and no virtio-fs export into an untrusted guest.
+- For agent or otherwise untrusted code that needs credentials: copy Gondolin's
+  mediation pattern (placeholders, host binding, deny by default), not its
+  stack; take smolvm's confined-VMM and networking-off defaults as the baseline.
+- Do not read any of the three as "the host cannot see the data". That requires
+  guest-side keys and, if host root must be excluded, a confidential guest.
 
 ## systemd and k3s/k0s
 
@@ -269,6 +370,9 @@ the storage note survives.
 - **Nesting:** for delegation and testing only; otherwise use siblings.
 - **More machines:** for failure domains only, with ciphertext-only nodes and
   client-held keys.
+- **Sandbox projects:** study Gondolin's mediation pattern, take smolvm's
+  networking-off and confined-VMM defaults, and use krun for the cheapest OCI
+  boundary; none of them moves host root out of the trust model.
 
 ## Open questions
 
