@@ -185,12 +185,11 @@ job each: `70_moratorium.sh` (release-age windows), `72_hardening.sh`
 `PIP_DISABLE_PIP_VERSION_CHECK`, `UV_INIT_BARE`).
 
 - Window: `MISE_MINIMUM_RELEASE_AGE=24h` (mise; lowered from 3 d in commit
-  26060ee), `UV_EXCLUDE_NEWER="3 days"`, `npm_config_min_release_age=3`,
-  `pnpm_config_minimum_release_age=4320` (minutes). pip has no release-age
+  26060ee), `UV_EXCLUDE_NEWER="3 days"`, `npm_config_min_release_age=1`,
+  `pnpm_config_minimum_release_age=1440` (minutes). pip has no release-age
   knob of its own, so uv carries the window for both. **Known non-uniformity:**
-  mise is 24 h while npm/pnpm/uv stay at 3 days — deliberate after the
-  lowering, but the code is the truth here and DR-005's original "uniform
-  3-day" claim is history.
+  mise 24 h, npm/pnpm 1 day, uv 3 days — deliberate, and the code is the truth
+  here, so DR-005's original "uniform 3-day" claim is history.
 - Why lowercase npm/pnpm vars: npm/pnpm read them case-insensitively; the
   uppercase duplicates are kept commented — they work but are redundant and
   heavy-handed.

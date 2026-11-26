@@ -12,9 +12,12 @@ MISE_MINIMUM_RELEASE_AGE="24h"
 export MISE_MINIMUM_RELEASE_AGE
 
 # npm/pnpm read these case-insensitively; the lowercase spelling is the one
-# that survives both. pnpm counts minutes: 4320 = 3 days.
-npm_config_min_release_age="3"
-pnpm_config_minimum_release_age="4320"
+# that survives both. pnpm counts minutes: 1440 = 1 day. npm/pnpm sit at 1 day
+# while mise stays 24h and uv 3 days (DECISIONS.md DR-005's status notes): a
+# consuming repo's gate pins have to reach what its other host already runs,
+# and a 3-day window refused a release under 2 days old.
+npm_config_min_release_age="1"
+pnpm_config_minimum_release_age="1440"
 export npm_config_min_release_age pnpm_config_minimum_release_age
 
 # pip has no release-age knob of its own; uv carries the window for both.

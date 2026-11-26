@@ -106,6 +106,12 @@ Status values: `Accepted` (deliberate), `Accidental` (mistake / tech debt),
   commit 26060ee, 2026-11-07), while npm/pnpm/uv stay at 3 days; pip's
   `PIP_UPLOADED_PRIOR_TO` was dropped as dead. Release-age vars are now
   `70_moratorium.sh`, refusals `72_hardening.sh`, cosmetics `10_env.sh`.
+- **Status note (2026-11-26):** npm/pnpm lowered to **1 day**
+  (`npm_config_min_release_age=1`, `pnpm_config_minimum_release_age=1440`); uv
+  stays 3 days and mise 24 h. Reason: a consuming repo's gate pins must reach
+  the versions its second host already runs, and the 3-day npm window refused a
+  release under two days old — 1 day keeps a cooldown and still lets a same-week
+  pin bump land.
 
 ## DR-006 | `NPM_CONFIG_IGNORE_SCRIPTS=true` | Accepted | 2025-12-02
 
