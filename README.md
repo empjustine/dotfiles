@@ -41,6 +41,7 @@ This file is an index, not a content home (DR-035).
 | [research/gpu-and-display-isolation.md](docs/research/gpu-and-display-isolation.md) | accelerated compute and graphical workloads: where the GPU boundary really is, one-GPU contention, and why Linux has no SurfaceFlinger for showing another session's surfaces (draft) |
 | [research/cross-host-systemd.md](docs/research/cross-host-systemd.md) | whether a distributed systemd control plane exists, and what fleet and Kubernetes teach (draft) |
 | [research/storage-overlay.md](docs/research/storage-overlay.md) | the smallest single-node storage system — abstraction ladder, index authority, what FEC is actually for, and whether k3s or Longhorn helps (draft) |
+| [research/microvm-composition.md](docs/research/microvm-composition.md) | how VMs and microVMs compose with the storage design — where plaintext lives, overhead, systemd versus k3s, nesting and distribution (draft) |
 | [declarative-upkeep.md](docs/declarative-upkeep.md) | the proof-of-concept schema and manifests for steps, asserts, credentials and phases (draft) |
 
 ## Use
