@@ -83,7 +83,7 @@ The earlier draft's wording is kept where it still applies.
 | id | as stated | cheapest form | what is cut |
 | --- | --- | --- | --- |
 | R1 | file-level encryption over plain files | one encrypted object per file plus a per-directory manifest that is itself a plain file | chunk stores, packing, cluster namespace |
-| R2 | per-folder/per-object keys, need-to-know | root key → per-workload KEK → per-object DEK; a local key daemon selects by caller | KMS service, per-client agents, network auth |
+| R2 | per-folder/per-object keys, need-to-know | root key → per-workload KEK → per-object DEK; a local key daemon selects by caller (custody in [key custody](key-custody.md)) | KMS service, per-client agents, network auth |
 | R3 | FEC plus redundant copies | copies across failure domains for availability; per-segment ciphertext digests for identity and repair; PAR2-style parity over the ciphertext (~10 % overhead) for bitrot | EC across servers, rack-aware layout, k+m shard tables |
 | R4 | restore from alternatives, verifiably | a verifier that walks manifests, checks roots and block hashes, restores any object from any copy, repairs bitrot from its parity, and reports what is unrecoverable | replication topology, per-server chunk maps |
 | R5 | parallel ops over cold cloud and slow USB SMR | two queue classes with per-device concurrency, and one upload/download queue per provider | global scheduler, cluster load balancing |

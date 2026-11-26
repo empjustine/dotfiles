@@ -333,3 +333,11 @@ someday", which the repository README already acknowledges.
 - No claim that a degraded pool is safe because the profile survives one
   loss; the SMR and USB failure modes are correlated.
 - No new decision record: the policies above are still candidates.
+
+### Key custody
+
+The choice between TPM-sealed credentials and a remote injector, and what
+either does against cold boot, is developed in [key custody](key-custody.md):
+the TPM protects a stolen disk and a tampered boot, the injector only adds
+value when it attests the caller, and cold boot defeats both while the pool is
+open.
