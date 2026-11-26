@@ -158,6 +158,85 @@ giving up per-object DEKs. That is a legitimate product decision (anyone can
 mount the ciphertext with `gocryptfs`), but it throws away per-workload
 revocation and rotation at object granularity, so it is not this design.
 
+### One key per volume, and how it handles concurrency
+
+gocryptfs is a **one-key-per-volume** design: a single master key is wrapped in
+`gocryptfs.conf` (scrypt or FIDO2) and either supplied through `-extpass` or
+`-masterkey`; `-passwd` rewraps it. There is no per-folder key, no
+multi-recipient wrap, and no mixed cipher inside one volume — AES-GCM, AES-SIV
+or XChaCha20-Poly1305 is chosen at `-init` and applies to the whole cipherdir.
+
+| want | gocryptfs |
+| --- | --- |
+| several workloads, each with its own key | one volume (one cipherdir, one conf) per workload |
+| several keys opening the *same* folder | not supported; the workaround is to give each workload the same master key (wrapped outside gocryptfs), which is one key shared, not several keys |
+| per-folder key inside one volume | not supported; nested volumes are the only equivalent |
+| mixed schemes (GCM, SIV, ChaCha) in one tree | separate volumes |
+| rotation without re-encryption | `-passwd` rewraps the master key; the data key is unchanged |
+
+This is the second reason the engine cannot use gocryptfs as its crypto layer:
+a single leaked master key opens the whole volume, and revocation is
+all-or-nothing.
+
+On concurrency, the answer has two halves.
+
+- **Within one mount**, concurrency is normal and safe. go-fuse serves requests
+  in parallel; a per-file `ContentLock` serialises content operations (write,
+  truncate, fallocate) so the block read-modify-write is not interleaved, and
+  `fdLock` keeps a descriptor from closing under an in-flight I/O. Different
+  files in the same directory proceed concurrently; there is no folder-wide
+  lock, and none is needed.
+- **Across several mounts or hosts** on the same cipherdir, gocryptfs was not
+  designed for it. Since v2.7.0, `-sharedstorage` uses byte-range locks to make
+  concurrent access from multiple mounts safe, at a cost: stat caching is off,
+  hard links cannot be created, throughput drops, and the man page still warns
+  that the mode is less tested. It is not a cluster filesystem.
+
+`-serialize_reads` is a throughput knob for backing stores that perform badly
+with concurrent reads, not a correctness control. So "folder-wise concurrency"
+needs no explicit lock from the caller: the per-file lock plus the kernel's
+semantics cover one mount, and `-sharedstorage` covers several mounts with the
+caveats above.
+
+### Composite, not monolith
+
+The draft that put encryption, copy placement, parity, the markers and the
+index in one FUSE daemon was the wrong shape. Only one of those has to sit at
+the FUSE boundary: the **acknowledgement coordinator**, because POSIX offers no
+hook between `write` and `fsync` that can wait for a remote copy or a parity
+pass — fanotify has no `fsync` permission event, and an LSM hook that sleeps on
+network I/O is not a design. Everything else is a component with a narrow
+interface.
+
+| layer | interface | sees plaintext | sees keys | can be separate |
+| --- | --- | --- | --- | --- |
+| crypto | `seal(plaintext) → object`, `open(object) → plaintext` | yes | the DEK | a library, in-process |
+| placement | `put(object, policy) → committed copies`, `get(id) → bytes` | no | no | a daemon or a library |
+| parity | `attach(object) → par2 set`, `verify`, `repair` | no | no | a keyless worker |
+| index | `record(object, copies, parity)`, `query` | no (opaque ids) | no | a local database, derivable |
+| key custody | `unwrap(workload) → KEK` | no | the KEKs | a daemon, off the I/O path |
+| FUSE + ack coordinator | `read`/`write`/`fsync`, calls the four above | yes (it is the adapter) | via crypto | must be at the FUSE boundary |
+
+The consequences are exactly what a composite buys:
+
+- **placement is ciphertext-only**, which is what makes the provider threat
+  model true and lets the `object` rung use the same layer without FUSE;
+- **parity needs no key**, so a blind restorer can run verify and repair;
+- **the coordinator is thin**: it orders data → copies → parity → manifest and
+  implements the markers; it is where the layers meet, not where they are
+  implemented;
+- **non-FUSE workloads** (S3, git) call crypto and placement directly and get an
+  explicit commit — no FUSE, no `fsync` semantics, no markers;
+- **each layer is testable alone**: crypto with test vectors, placement with a
+  fault-injecting backend, parity with corrupted blocks, the coordinator with
+  crash injection.
+
+The cost is one more interface and a commit protocol that spans layers. Keep
+them as in-process modules first, with the interfaces above, and split one out
+into a service only when its isolation or privilege needs it. The one split
+that is worth doing from the start is key custody: it should never be in the
+same process as the data path.
+
 ### Performance, honestly
 
 A FUSE daemon adds a context switch and a copy per request. The levers are
