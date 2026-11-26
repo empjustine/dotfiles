@@ -42,6 +42,7 @@ This file is an index, not a content home (DR-035).
 | [research/cross-host-systemd.md](docs/research/cross-host-systemd.md) | whether a distributed systemd control plane exists, and what fleet and Kubernetes teach (draft) |
 | [research/storage-overlay.md](docs/research/storage-overlay.md) | the smallest single-node storage system — abstraction ladder, index authority, what FEC is actually for, and whether k3s or Longhorn helps (draft) |
 | [research/microvm-composition.md](docs/research/microvm-composition.md) | how VMs and microVMs compose with the storage design — trust direction, where plaintext lives, the Gondolin/smolvm/krun comparison, TSI versus passt versus TAP, virtio-fs and a FUSE view, nesting and distribution (draft) |
+| [research/sharing-and-durability.md](docs/research/sharing-and-durability.md) | the least-vulnerable file-level sharing interface and the `.quadronegro-*` durability marker contract (draft) |
 | [declarative-upkeep.md](docs/declarative-upkeep.md) | the proof-of-concept schema and manifests for steps, asserts, credentials and phases (draft) |
 
 ## Use

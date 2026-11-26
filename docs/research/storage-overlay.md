@@ -72,6 +72,9 @@ Three consequences worth naming:
 - `block` is an exception list, not a tier. A rare VM gets a LUKS'd LV; it does
   not justify a CSI driver, an iSCSI initiator, or a three-node cluster.
 
+The `files` rung's sharing interface and the per-folder durability markers are
+specified in [sharing and durability](sharing-and-durability.md).
+
 ## What remains of the requirement
 
 The eight properties, restated at the rung where they are cheapest to satisfy.
