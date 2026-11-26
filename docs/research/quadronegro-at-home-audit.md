@@ -1,23 +1,24 @@
 ---
-id: research-unraid-audit
+id: research-quadronegro-audit
 type: architecture-design
 status: draft
-title: 'Findings: unraid-at-home upkeep and declarative upkeep'
+title: 'Findings: quadronegro upkeep and declarative upkeep'
 parent: index
 references: [index, research-overview, research-files-volumes, research-upkeep-mapping, decision-log, system]
 ---
 
-# Findings: unraid-at-home upkeep
+# Findings: quadronegro upkeep
 
-This is a static audit of `~/unraid-at-home/` as it relates to
+This is a static audit of the pool in `~/unraid-at-home/` as it relates to
 `bin/upkeep-everything-2.py` and the existing upkeep research. It records what
 the scripts do now, which findings survive scrutiny, and which one was wrong.
 Nothing here is a decision record or a migration plan; the companion design
-note is [unraid-at-home design](unraid-at-home-design.md).
+note is [the pool design](quadronegro-at-home-design.md).
 
 ## Method and correction
 
-The audit read the three current scripts, the unraid repository history, the
+The audit read the three current scripts, the `~/unraid-at-home` repository
+history, the
 allocator and executors, the upkeep manifest and the dated records in
 [DECISIONS.md](../../DECISIONS.md). It also checked systemd source at
 `054ca239` (2026-11-21) and the local `jq` behaviour. The shell used for the
@@ -158,7 +159,7 @@ container manager stops first.
   shutdown, and that fstab `x-systemd.requires=` may be repeated to require
   several units.
 - DR-051, DR-052 and DR-053 define the allocator's current argv, host and
-  backend contract. The unraid work should extend that contract, not replace
+  backend contract. The pool work should extend that contract, not replace
   it with shell strings.
 
 ## Open questions for the live host

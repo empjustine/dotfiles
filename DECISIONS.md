@@ -1466,3 +1466,32 @@ eval — the spawn is the smaller half.
   trades concurrency for direct visibility. Shorter manifests state only what
   differs from the defaults. Unknown default keys and invalid values are
   manifest errors at `plan` time.
+## DR-054 | The pool is named `quadro-negro`; `unraid` only in the `X-at-home` meme | Accepted (applied) | 2026-11-25
+
+- **Context:** the declarative pool work named units, jobs and paths with
+  `unraid` unqualified (`unraid-pool.target`, `config/upkeep/unraid.json`,
+  `/var/mnt/unraid`). That reads as a claim that this host runs an Unraid
+  array, which it is not: one Btrfs filesystem over LUKS members on mismatched
+  transports is a worse, partly non-functional version of an array. The only
+  place that claim is a joke is the repository name `~/unraid-at-home`, where
+  `X-at-home` already says "strictly worse and not really X".
+- **Decision:** component names use `quadro-negro` — "the persistence board":
+  persistent, not necessarily hot or fast, not necessarily all writable,
+  intended to be correct rather than guaranteed error-free. `unraid-at-home`
+  stays as the repository name and as a literal path; bare `unraid` is not used
+  for a unit, job, mount point, spec id or document name.
+- **Consequences:** `config/quadro-negro/`, `config/upkeep/quadro-negro.json`,
+  the `quadro-negro-*` jobs, `/var/mnt/quadro-negro`, and the three research
+  notes with their ids all move in one step; the examples stay uninstalled, so
+  the rename is a documentation change. The meme keeps working where it
+  belongs, and a future component cannot inherit the product name by accident.
+- **Status note (2026-11-25):** the spelling is **`quadronegro`**, no hyphen.
+  The hyphenated form breaks every path-derived unit name — systemd escapes
+  `-` as `\x2d` in unit names, so `/var/mnt/quadro-negro` is
+  `var-mnt-quadro\x2dnegro.mount`: the pool target referenced a unit that does
+  not exist and the fstab drop-in directory was never read. The decision above
+  stands (component name, meme reserved for the repository); the token is
+  `quadronegro`, the mount point `/var/mnt/quadronegro`, and any future name
+  must stay hyphen-free for the same reason. Verify with
+  `systemd-escape -p --suffix=mount <path>` before naming a mount unit in a
+  unit file.

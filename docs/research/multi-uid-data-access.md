@@ -2,22 +2,22 @@
 id: research-multi-uid-access
 type: architecture-design
 status: draft
-title: "Multi-uid access to the unraid data mount"
+title: "Multi-uid access to the quadronegro data mount"
 parent: index
-references: [index, research-unraid-design, research-unraid-audit, research-files-volumes, declarative-upkeep-poc]
+references: [index, research-quadronegro-design, research-quadronegro-audit, research-files-volumes, declarative-upkeep-poc]
 ---
 
-# Multi-uid access to the unraid data mount
+# Multi-uid access to the quadronegro data mount
 
 This note answers the access questions that follow from the declarative
-unraid shape: whether a mount under the immutable Fedora atomic root is
+quadronegro shape: whether a mount under the immutable Fedora atomic root is
 usable, how per-workload uids (for example `u0_a200` at uid 10200) get
 read-only and read-write views of one Btrfs filesystem, whether the same
 segmentation works over NFS and SFTP, and whether `systemd-homed` is the
 right mechanism. It is a draft design note, not an installed change.
 
-The companion documents are [the candidate unraid design](unraid-at-home-design.md),
-[the audit](unraid-at-home-audit.md), [files and volumes](files-and-volumes.md)
+The companion documents are [the candidate quadronegro design](quadronegro-at-home-design.md),
+[the audit](quadronegro-at-home-audit.md), [files and volumes](files-and-volumes.md)
 and [the declarative proof of concept](../declarative-upkeep.md).
 
 ## Current state and target
@@ -40,7 +40,7 @@ On Fedora atomic (Silverblue, Bazzite) the root is a read-only composefs
 image. `/usr` is read-only, `/etc` and `/var` are writable and persistent,
 and `/run` is a tmpfs. Mounting a filesystem is not blocked by the read-only
 root, and a system mount unit creates its mount point even on tmpfs (systemd
-calls `mkdir_p_label` before mounting). `/run/media/unraid` therefore works,
+calls `mkdir_p_label` before mounting). `/run/media/quadronegro` therefore works,
 but it is the wrong home for persistent shared data:
 
 - every `/run` directory is recreated at boot, so ownership, mode, SELinux
@@ -53,7 +53,7 @@ but it is the wrong home for persistent shared data:
   be declared without changing `/usr`; only packages such as `cryptsetup`,
   `nfs-utils` or `acl` need `rpm-ostree install` (or a container).
 
-The reference shapes now use `/var/mnt/unraid`. `/var/mnt` is the persistent
+The reference shapes now use `/var/mnt/quadronegro`. `/var/mnt` is the persistent
 mount convention used by Fedora CoreOS and systemd tooling; `/srv` also works
 when it is on the writable `/var` volume. This is a path change only: the
 Btrfs filesystem and its contents are unchanged.
@@ -74,7 +74,7 @@ owner of a file can change its mode or ACL. Mount views are stronger: a
 read-only bind mount cannot be remounted read-write without the capability to
 do so. MAC is stronger still, but it needs policy and label discipline.
 
-For the unraid data the useful split is therefore:
+For the quadronegro data the useful split is therefore:
 
 - **shared media**: root-owned, mounted read-only into workloads;
 - **workload state**: owned by the workload uid, writable only by that uid;
@@ -135,7 +135,7 @@ u0_a200:524288:65536
 A directory layout that keeps the trust boundaries visible:
 
 ```
-/var/mnt/unraid/
+/var/mnt/quadronegro/
   media/                     root:media-ro   2750   # published, read-only
   workloads/u0_a200/         10200:10200     2770   # private, read-write
   shared/<project>/          root:<group>    2770   # explicit group access
@@ -145,10 +145,10 @@ ACLs for a workload that is not in the media group, plus default ACLs on
 directories so new files inherit the rule:
 
 ```sh
-setfacl -R -m u:10200:rX /var/mnt/unraid/media
-setfacl -R -d -m u:10200:rX /var/mnt/unraid/media
-chown -R 10200:10200 /var/mnt/unraid/workloads/u0_a200
-chmod 2770 /var/mnt/unraid/workloads/u0_a200
+setfacl -R -m u:10200:rX /var/mnt/quadronegro/media
+setfacl -R -d -m u:10200:rX /var/mnt/quadronegro/media
+chown -R 10200:10200 /var/mnt/quadronegro/workloads/u0_a200
+chmod 2770 /var/mnt/quadronegro/workloads/u0_a200
 ```
 
 `rX` is read plus traverse on directories, not execute on files. A workload
@@ -160,8 +160,8 @@ mount:
 ```ini
 [Unit]
 Description=workload u0_a200 example
-Requires=var-mnt-unraid.mount
-After=var-mnt-unraid.mount
+Requires=var-mnt-quadronegro.mount
+After=var-mnt-quadronegro.mount
 
 [Service]
 User=10200
@@ -171,8 +171,8 @@ ProtectSystem=strict
 ProtectHome=yes
 NoNewPrivileges=yes
 StateDirectory=u0_a200
-BindReadOnlyPaths=/var/mnt/unraid/media:/data/media
-BindPaths=/var/mnt/unraid/workloads/u0_a200:/data/work
+BindReadOnlyPaths=/var/mnt/quadronegro/media:/data/media
+BindPaths=/var/mnt/quadronegro/workloads/u0_a200:/data/work
 WorkingDirectory=/data/work
 ExecStart=/usr/local/bin/workload
 ```
@@ -187,8 +187,8 @@ For a rootless Quadlet container under the same user, the equivalent view is:
 ```ini
 [Container]
 UserNS=keep-id
-Volume=/var/mnt/unraid/media:/media:ro,z
-Volume=/var/mnt/unraid/workloads/u0_a200:/work:rw,z
+Volume=/var/mnt/quadronegro/media:/media:ro,z
+Volume=/var/mnt/quadronegro/workloads/u0_a200:/work:rw,z
 ```
 
 `UserNS=keep-id` maps the container user to host uid 10200, so files written
@@ -206,9 +206,9 @@ loginctl enable-linger u0_a200
 Test the boundary with the numeric uid before trusting it:
 
 ```sh
-sudo -u "#10200" test -r /var/mnt/unraid/media/example && echo media-readable
-sudo -u "#10200" test -w /var/mnt/unraid/media/example || echo media-read-only
-sudo -u "#10200" touch /var/mnt/unraid/workloads/u0_a200/probe && echo state-writable
+sudo -u "#10200" test -r /var/mnt/quadronegro/media/example && echo media-readable
+sudo -u "#10200" test -w /var/mnt/quadronegro/media/example || echo media-read-only
+sudo -u "#10200" touch /var/mnt/quadronegro/workloads/u0_a200/probe && echo state-writable
 ```
 
 ## Rootless Podman per workload
@@ -236,8 +236,8 @@ model. Export leaves, not the whole tree with `crossmnt`, so each path has one
 set of options:
 
 ```
-/var/mnt/unraid/media              *(ro,root_squash,sec=krb5p)
-/var/mnt/unraid/workloads/u0_a200  10.0.0.42(rw,root_squash,sec=krb5p)
+/var/mnt/quadronegro/media              *(ro,root_squash,sec=krb5p)
+/var/mnt/quadronegro/workloads/u0_a200  10.0.0.42(rw,root_squash,sec=krb5p)
 ```
 
 - `sec=sys` (the default) sends numeric uids and trusts the client. It is
@@ -479,7 +479,7 @@ policy small and test it on a scratch tree before labeling the live data.
 
 ## Migration order
 
-1. Mount the filesystem at `/var/mnt/unraid`, verify with `findmnt`, and
+1. Mount the filesystem at `/var/mnt/quadronegro`, verify with `findmnt`, and
    confirm the mount unit is the only owner (no udisks mount of the same
    filesystem).
 2. Create the layout, the workload users and the ACLs while uid 1000 still has

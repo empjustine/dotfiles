@@ -1,15 +1,15 @@
 ---
-id: research-unraid-design
+id: research-quadronegro-design
 type: architecture-design
 status: draft
-title: 'Candidate declarative design for unraid-at-home'
+title: 'Candidate declarative design for the quadronegro pool'
 parent: index
-references: [index, research-unraid-audit, research-overview, research-files-volumes, research-upkeep-mapping, decision-log]
+references: [index, research-quadronegro-audit, research-overview, research-files-volumes, research-upkeep-mapping, research-quadronegro-availability-threats, research-workload-isolation-egress, decision-log]
 ---
 
-# Candidate declarative design for unraid-at-home
+# Candidate declarative design for the quadronegro pool
 
-This note turns the [unraid-at-home audit](unraid-at-home-audit.md) into a
+This note turns the [pool audit](quadronegro-at-home-audit.md) into a
 candidate design: what a declarative replacement would own, what the allocator
 would need, and how to migrate without risking the Btrfs filesystem. It is a
 proposal, not an applied decision; no unit, manifest or script was changed for
@@ -60,7 +60,7 @@ luks-MEMBER3  UUID=<luks-uuid-3>  /etc/credstore.encrypted/luks-MEMBER3  noauto
 ```
 
 ```/etc/fstab
-UUID=<btrfs-fs-uuid>  /var/mnt/unraid  btrfs  noauto,x-systemd.requires=systemd-cryptsetup@luks-MEMBER1.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER2.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER3.service  0  0
+UUID=<btrfs-fs-uuid>  /var/mnt/quadronegro  btrfs  noauto,x-systemd.requires=systemd-cryptsetup@luks-MEMBER1.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER2.service,x-systemd.requires=systemd-cryptsetup@luks-MEMBER3.service  0  0
 ```
 
 Repository evidence points to `a95e1c63-...` as the filesystem/mount UUID
@@ -75,10 +75,66 @@ systemd source at `054ca239` also puts `systemd-cryptsetup@.service` in
 a slice destroyed very late in shutdown, which keeps mappings alive until the
 filesystem has been unmounted.
 
-Use `noauto` plus an explicit `unraid-mount.target` if the disks are
-optional; do not add `nofail` unless mounting degraded or not at all is an
+Use `noauto` plus an explicit `quadronegro-pool.target` (with
+`WantedBy=multi-user.target`, enabled, since nothing else pulls the mount in)
+if the disks are optional; do not add `nofail` unless not mounting at all is an
 accepted outcome. Avoid `x-systemd.device-timeout=0`: an absent disk should
 fail visibly, not hang boot forever.
+
+### Strict versus degraded
+
+The sketch above is the **strict** policy: every member is a
+`x-systemd.requires=`, so an absent USB drive means the Btrfs mount does not
+start at all. That is a deliberate fail-closed choice, not a degraded-mount
+setup. The live device mix (one fast SATA CMR member and two USB drive-managed
+SMR members) makes the difference important:
+
+- Btrfs RAID1 (two copies) keeps two copies of each chunk. With three members
+  it tolerates one missing device; it does **not** tolerate two. If both USB
+  drives are absent, only the SATA member remains and RAID1 cannot mount (it
+  needs at least two devices).
+- RAID1 does not guarantee that every chunk has a copy on the SATA member.
+  The two copies may both land on the two USB drives. Losing both USB drives can
+  therefore lose data even though the SATA drive is still present.
+- A degraded mount is a Btrfs mount option, `-o degraded`, and it only helps
+  for devices missing at mount time. A USB device that disappears after mount
+  causes I/O errors; Btrfs may remount read-only or abort the transaction.
+
+`fstab` **cannot** express a tolerant policy, and this is the correction the
+availability register records: udev's btrfs rule marks every device of an
+incomplete multi-device filesystem `ID_BTRFS_READY=0`, hence
+`SYSTEMD_READY=0`, so the mapper `.device` units never become ready and the
+`.mount` job waits for the missing member and then fails at
+`x-systemd.device-timeout` without ever running `mount`. `degraded,nofail` and
+`x-systemd.wants=` on the USB members are therefore dead options; the strict
+line in `config/quadronegro/fstab.example` is the only shape fstab can express. A
+tolerant mount needs a system-level service that:
+
+1. requires the SATA `systemd-cryptsetup@` unit and *wants* the USB ones with a
+   device timeout;
+2. runs `btrfs device scan`;
+3. counts the present members and refuses to mount with fewer than two;
+4. runs `mount -o degraded UUID=<fs> /var/mnt/quadronegro` (or the normal mount when
+   all members are present);
+5. verifies with `findmnt` and `btrfs filesystem show`.
+
+When a USB member returns, run `btrfs device scan` and then `btrfs scrub` to
+repair the stale copies; a `btrfs balance` may be needed to restore full
+distribution. A udev or path unit can trigger the rescan, but the scrub and
+balance should stay explicit maintenance jobs, not automatic boot work.
+
+The failure propagation (what systemd already stops and what needs a unit of
+its own), the availability arithmetic of three members with two copies, and the
+physical-access ladder are registered in [availability and threat
+scenarios](quadronegro-availability-and-threats.md).
+
+Drive-managed SMR behind USB is the weakest part of this design. Random writes
+and Btrfs metadata trigger SMR garbage collection and long stalls; USB resets
+add transport errors. RAID1c2 doubles the writes and does not remove the SMR
+jitter. This is not a configuration Btrfs refuses, but it is not a configuration
+to trust without a backup. If the two USB drives are treated as unreliable,
+RAID1c2 across them is a one-failure design, and the failure that matters is the
+second USB loss.
 
 For rootless containers, add `Before=user@UID.service` to the mount unit so
 the user manager (and its Quadlet containers) stops before the mount at
@@ -114,7 +170,7 @@ an optional hardening step, not a different trust model.
 ## Allocator changes
 
 Extend, do not replace, the DR-051/DR-052/DR-053 contract. A second manifest,
-for example `config/upkeep/unraid.json` selected with `--manifest`, keeps
+for example `config/upkeep/quadronegro.json` selected with `--manifest`, keeps
 privileged disk jobs out of the daily general manifest.
 
 | field | proposed meaning |
@@ -161,7 +217,7 @@ script are removed.
 
 The shutdown job chain can be expressed with `after` edges reversed for
 stop order and a dedicated resource token, for example
-`unraid_shutdown=1`, but it must be anchored in a systemd oneshot with
+`quadronegro_shutdown=1`, but it must be anchored in a systemd oneshot with
 normal default dependencies so it is pulled into `shutdown.target` or the
 user manager's `exit.target`.
 
@@ -199,7 +255,7 @@ the choice decides whether ordering is precise in one manager or coarse via
 4. Install the crypttab and mount units with all member dependencies. Test a
    missing-member case: the mount must not appear.
 5. Move Syncthing first, then Transmission, keeping old scripts as rollback.
-6. Add the unraid manifest and run `plan`; then run the maintenance chain
+6. Add the quadronegro manifest and run `plan`; then run the maintenance chain
    with `--local` only where credentials are not required.
 7. Exercise shutdown with checksums on a scratch file and a forced sync
    deadline; confirm container stop, unmount, `luksClose`, journal entries
@@ -214,7 +270,7 @@ or manifest change.
 - No new secret store, CSI driver, reconciler or kernel-bypass wrapper.
 - No change to the acknowledged privileged-local-access threat model.
 - No automatic volume deletion or changed-option reconciliation.
-- No replacement of the allocator's DAG with a shell monolith; the unraid
+- No replacement of the allocator's DAG with a shell monolith; the quadronegro
   workflow is a manifest plus small scripts and systemd units.
 
 ## Status
@@ -222,5 +278,5 @@ or manifest change.
 Draft proposal. It depends on the live-host answers in the audit; until those
 are recorded, UUIDs and unit names here are placeholders. A future decision
 record should choose rootful versus rootless, the exact sync policy, and
-whether the allocator gains credential/step fields or the unraid jobs stay
+whether the allocator gains credential/step fields or the quadronegro jobs stay
 script-wrapped.

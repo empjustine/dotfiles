@@ -4,7 +4,7 @@ type: architecture-design
 status: draft
 title: "Declarative upkeep proof of concept"
 parent: index
-references: [research-overview, research-guards, research-upkeep-mapping, research-unraid-audit, research-unraid-design, research-multi-uid-access, research-cross-host-systemd, research-termux-orchestration, decision-log, system, execution-map]
+references: [research-overview, research-guards, research-upkeep-mapping, research-quadronegro-audit, research-quadronegro-design, research-quadronegro-availability-threats, research-workload-isolation-egress, research-multi-uid-access, research-cross-host-systemd, research-termux-orchestration, decision-log, system, execution-map]
 ---
 
 # Declarative upkeep proof of concept
@@ -12,7 +12,7 @@ references: [research-overview, research-guards, research-upkeep-mapping, resear
 This document describes the **proof of concept** built from the research notes
 in [research/overview.md](research/overview.md). It adds `steps`, `assert`,
 `credentials` and `phase` to the upkeep manifest and adds declarative
-replacements for the unraid-at-home lifecycle and for the composite scripts in
+replacements for the quadronegro lifecycle and for the composite scripts in
 `bin/upkeep-*`. The old scripts are deliberately untouched and remain rollback
 material; nothing here is installed, enabled or selected by default.
 
@@ -74,8 +74,8 @@ failed job, not a quiet skip. The kinds are deliberately small:
 
 Both spellings normalize to the same check:
 
-    {"type": "path_is_mount_point", "path": "/var/mnt/unraid"}
-    {"path_is_mount_point": "/var/mnt/unraid"}
+    {"type": "path_is_mount_point", "path": "/var/mnt/quadronegro"}
+    {"path_is_mount_point": "/var/mnt/quadronegro"}
 
 Checks are evaluated when the job is about to start, before resource tokens are
 acquired. That is intentionally earlier than systemd's "at job start" rule: a
@@ -121,22 +121,27 @@ status` flow with a read-only machine identity and a refresh job; that
 provisioning is **not** part of this proof of concept. The acknowledged
 privileged-local-access boundary does not change.
 
-## The unraid-at-home manifest
+## The quadronegro manifest
 
-`config/upkeep/unraid.json` models the storage as **one Btrfs filesystem with
+The component name is a decision, not a style: DR-054 reserves `unraid` for the
+`X-at-home` meme and names the pool `quadronegro` — one word, because systemd
+escapes `-` as `\x2d` in path-derived unit names. Everything below follows that
+spelling, including `/var/mnt/quadronegro`.
+
+`config/upkeep/quadronegro.json` models the storage as **one Btrfs filesystem with
 three encrypted member devices**, not as four independent volumes. It follows
-the correction in [the audit](research/unraid-at-home-audit.md): unlock every
+the correction in [the audit](research/quadronegro-at-home-audit.md): unlock every
 member, mount the filesystem once, stop writers before touching the mount,
 unmount first, then close each mapping.
 
 | job | phase | what it replaces |
 | --- | --- | --- |
-| `unraid-unlock-members` | boot | the member-unlock loop in `10-unlock.sh` / `20-unlock-cryptsetup.sh`, with explicit `cryptsetup luksOpen` and no udisks daemon |
-| `unraid-mount` | boot | the `findmnt` / `udisksctl mount` fallback; one `mount UUID=<fs>` plus a `findmnt` check |
-| `unraid-start-writers` | boot | the container start in `-start-syncthing.sh` / `-start-transmission.sh`; Quadlet owns the units |
-| `unraid-stop-writers` | shutdown | the broad `podman pod/container stop --all` sweep; only the declared units, then `sync` |
-| `unraid-unmount` | shutdown | the repeated `udisksctl unmount` sweeps; `sync`, then one explicit `umount` |
-| `unraid-lock-members` | shutdown | the repeated `udisksctl lock` sweeps; one `cryptsetup luksClose` per member, then `sync` |
+| `quadronegro-unlock-members` | boot | the member-unlock loop in `10-unlock.sh` / `20-unlock-cryptsetup.sh`, with explicit `cryptsetup luksOpen` and no udisks daemon |
+| `quadronegro-mount` | boot | the `findmnt` / `udisksctl mount` fallback; one `mount UUID=<fs>` plus a `findmnt` check |
+| `quadronegro-start-writers` | boot | the container start in `-start-syncthing.sh` / `-start-transmission.sh`; Quadlet owns the units |
+| `quadronegro-stop-writers` | shutdown | the broad `podman pod/container stop --all` sweep; only the declared units, then `sync` |
+| `quadronegro-unmount` | shutdown | the repeated `udisksctl unmount` sweeps; `sync`, then one explicit `umount` |
+| `quadronegro-lock-members` | shutdown | the repeated `udisksctl lock` sweeps; one `cryptsetup luksClose` per member, then `sync` |
 
 The "fourth" UUID (`a95e1c63-...`) is the filesystem/mount UUID, not a member.
 The `open-by-uuid/` symlink in git history and the older `open.sh` mount that UUID,
@@ -147,23 +152,23 @@ inventory must decide whether it is a live member or stale history, with
 `mount UUID=a95e1c63-...` — one mount for the one Btrfs filesystem — and
 asserts that the filesystem device exists before it starts.
 
-The mount point is the stable `/var/mnt/unraid`; the current scripts and the
+The mount point is the stable `/var/mnt/quadronegro`; the current scripts and the
 udisks fallback use `/run/media/<user>/<uuid>`. Installing the fstab example
 changes only the mount path, not the filesystem contents, so the Quadlet bind
-sources under `/var/mnt/unraid` reach the same data as the old
+sources under `/var/mnt/quadronegro` reach the same data as the old
 `/run/media/<user>/<uuid>` paths.
 
 `~/unraid-at-home/DECLARATIVE.md` carries the same mapping for that
 repository, records the `open-by-uuid`/`luks2-by-uuid` evidence and leaves
 every script in place as rollback material.
 
-### Why `/var/mnt/unraid` and not `/run/media/unraid`
+### Why `/var/mnt/quadronegro` and not `/run/media/quadronegro`
 
 On Fedora atomic (Silverblue, Bazzite) the root is a read-only composefs
 image: `/usr` is read-only, `/etc` and `/var` are writable and persistent,
 and `/run` is a tmpfs. A system mount unit can create its mount point on
 either path (systemd calls `mkdir_p_label` before mounting), so
-`/run/media/unraid` is not broken. It is still the wrong home for persistent
+`/run/media/quadronegro` is not broken. It is still the wrong home for persistent
 shared data: every `/run` directory is recreated at boot, so ownership, mode,
 SELinux label and export roots are boot-local; `/run/media` is the udisks
 namespace; and `/var` is a real subvolume that survives updates. `/etc/fstab`
@@ -179,15 +184,33 @@ The manifest is an allocator-owned alternative, not a replacement for
 systemd's own lifecycle. For unattended boot, the system manager should own the
 unlock and mount:
 
-- `config/unraid/crypttab.example` — one `systemd-cryptsetup@` member per
-  LUKS UUID, with an encrypted credential as the key file;
-- `config/unraid/fstab.example` — one Btrfs mount with repeated
+- `config/quadronegro/crypttab.example` — one `systemd-cryptsetup@` member per
+  LUKS UUID with key field `none`, i.e. a LUKS2 token (TPM2) does the unlock
+  and no key file sits on disk. The credential variant needs a
+  `LoadCredentialEncrypted=` + `ExecStart=` drop-in, because
+  `systemd-cryptsetup` does not decrypt `systemd-creds` ciphertext; the example
+  carries that drop-in and the reason it is not simply a key-file path;
+- `config/quadronegro/fstab.example` — one Btrfs mount with repeated
   `x-systemd.requires=` for every member, so a missing member prevents the
-  mount instead of producing a degraded filesystem silently.
+  mount instead of producing a degraded filesystem silently;
+- `config/quadronegro/quadronegro-pool.target.example`, `quadronegro-parked.target.example`
+  and `quadronegro-park.service.example` — the two mutually exclusive states and the
+  close pass: the pool target `Requires=` the members and the mount, so a
+  missing member makes the *mounted state* unreachable rather than degraded,
+  while the parked target owns boot. The oneshot exists because the generated
+  `systemd-cryptsetup@` units are `IgnoreOnIsolate=true`, so no amount of
+  target composition closes the mappings by itself.
 
 Both files are examples and are not installed. The manifest is useful where a
 systemd mount unit does not exist, as the shutdown step chain, and as the
 testable schema.
+
+What a missing or hung member does to that shape — the default stop chain and
+its three holes, the strict/degraded policy options with their verdicts, and
+the physical-access ladder — is registered in
+[availability and threat scenarios](research/quadronegro-availability-and-threats.md);
+the per-workload uid, slice and network split is in
+[workload isolation and egress](research/workload-isolation-and-egress.md).
 
 ## Quadlet replacements
 
@@ -197,6 +220,7 @@ The two container scripts are expressed as Quadlet units:
 | --- | --- |
 | `config/quadlet/syncthing-data.volume`, `syncthing.container` | `bin/-start-syncthing.sh` |
 | `config/quadlet/transmission-data.volume`, `transmission.container` | `bin/-start-transmission.sh` |
+| `config/quadlet/hister-data.volume`, `hister.container` | the `podman run … ghcr.io/asciimoo/nogon:latest` line (named volume becomes a bind-backed `.volume`) |
 
 The volumes use `Type=bind` and `Device=` (not `Options=bind`), so Podman
 validates the device and Quadlet can add `RequiresMountsFor=`. The containers
@@ -234,15 +258,15 @@ file format.
 Read-only inspection:
 
     python3 bin/upkeep-everything-2.py plan --manifest config/upkeep/declarative-poc.json
-    python3 bin/upkeep-everything-2.py plan --manifest config/upkeep/unraid.json
-    python3 bin/upkeep-everything-2.py plan --phase shutdown --manifest config/upkeep/unraid.json
+    python3 bin/upkeep-everything-2.py plan --manifest config/upkeep/quadronegro.json
+    python3 bin/upkeep-everything-2.py plan --phase shutdown --manifest config/upkeep/quadronegro.json
 
 Execution uses the same allocator and backends:
 
     python3 bin/upkeep-everything-2.py run podman-build-poc --local --manifest config/upkeep/declarative-poc.json
-    python3 bin/upkeep-everything-2.py run unraid-mount --local --manifest config/upkeep/unraid.json
+    python3 bin/upkeep-everything-2.py run quadronegro-mount --local --manifest config/upkeep/quadronegro.json
 
-The unraid jobs require live block devices, a mounted `/var/mnt/unraid`,
+The quadronegro jobs require live block devices, a mounted `/var/mnt/quadronegro`,
 passwordless `sudo -n`, and (for the systemd backend) user credentials. With
 `--local` they fail closed at the first missing assert or credential; that is
 the intended dry-run substitute. There is no execution path that accepts
@@ -284,9 +308,9 @@ live-host claim; the current working container has no `systemd`, `podman`,
 | `bin/-upkeep-act-logs.sh` | stays a script | move + zstd + `xdg-user-dir` | keep |
 | `bin/-ssh-upkeep.sh` | stays a script | jq/heredoc generator | keep |
 | `bin/-upkeep-everything.sh` | `upkeep-everything-2.py` | the existing allocator | already replaced |
-| unraid unlock and mount | `config/upkeep/unraid.json` boot jobs | plans cleanly; asserts and credential rules tested | host-blocked |
-| unraid shutdown | `stop-writers` -> `unmount` -> `lock-members` | lifecycle test proves the order | host-blocked; systemd should own final authority |
-| unraid secrets | `credentials` + `LoadCredentialEncrypted` | fail-closed and deferred path tested | host-blocked; no machine identity yet |
+| quadronegro unlock and mount | `config/upkeep/quadronegro.json` boot jobs | plans cleanly; asserts and credential rules tested | host-blocked |
+| quadronegro shutdown | `stop-writers` -> `unmount` -> `lock-members` | lifecycle test proves the order | host-blocked; systemd should own final authority |
+| quadronegro secrets | `credentials` + `LoadCredentialEncrypted` | fail-closed and deferred path tested | host-blocked; no machine identity yet |
 
 Two host filters bound the claim. The Termux note
 [termux-orchestration](research/termux-orchestration.md) re-runs the hypotheses
@@ -341,6 +365,6 @@ The research questions still stand: whether `steps` or nested `argv` is the
 long-term field; whether `allow_failure` survives or idempotent verbs remove
 the need; whether asserts stay before conditions; whether remote steps keep the
 one-SSH transport; whether credentials are user or system credentials; and
-whether the unraid lifecycle moves to system units with the allocator keeping
+whether the quadronegro lifecycle moves to system units with the allocator keeping
 only maintenance jobs. The proof of concept exists to make those choices
 testable, not to pre-empt them.

@@ -51,10 +51,32 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | `config/systemd/user/tmux-bg.service` | same for `bgtmux` / `jobs`; the `keepalive` window holds the session open (DR-046, DR-047) |
 | `config/systemd/user/tmux-upkeep.service`, `tmux-upkeep.timer` | daily `tmux-profiles upkeep`: stale job windows and old logs (DR-046) |
 | `config/tmux/tmux.conf` | server options for both profiles: `update-environment` list refreshed from the attaching client (DR-048) |
+| `config/upkeep/jobs.json` | the maintenance DAG: `argv` jobs, optional dependencies/resources, full SSH hosts, and top-level `defaults` for timeout/retries (DR-049, DR-051, DR-053) |
+| `config/upkeep/declarative-poc.json` | proof-of-concept replacements for the build, local containers and verb-only Oracle scripts: serial `steps`, typed `assert` and phases (draft) |
+| `config/upkeep/quadronegro.json` | proof-of-concept quadronegro lifecycle: unlock members, mount once, stop writers, unmount, close members, with `credentials` and `assert` (draft; naming DR-054) |
+| `bin/upkeep-everything-2.py` | allocator: expands `${host}` fan-out, validates the graph, evaluates typed asserts, then schedules ready jobs by FIFO ticket and resource tokens across the four systemd/tmux backends; also validates `steps`, `credentials` and `phase` (DR-051, DR-052, DR-053) |
+| `bin/upkeep_cmd.py` | shared command builder and transient unit-name helper for both executors (DR-052) |
+| `bin/upkeep_asserts.py` | typed precondition checks for `assert`: path, mount point, command, block device, credential and environment (draft) |
+| `bin/upkeep_steps.py` | serial step runner: one process, `step N/M` logs, stop on first failure, optional `allow_failure`, one-SSH remote body, deferred `${CREDENTIALS_DIRECTORY}` (draft) |
+| `bin/upkeep_systemd_exec.py` | transient user-unit executor: `RuntimeMaxSec`, `LoadCredentialEncrypted=`, session env passthrough, propagated exit status (DR-052) |
+| `bin/upkeep_journal_follow.py` | follows one unit's user journal and exits when that unit goes inactive (DR-052) |
+| `bin/upkeep-run-one` | marker-based fallback runner: local or implicit-ssh `argv` or `--steps`, log, `.done` status and pane hold (DR-051, DR-052) |
+| `bin/upkeep-remote/*.sh` | composite Oracle steps piped to `sh -s` on the remote host; replaces `bin/oracle-step` (DR-051) |
+| `bin/upkeep-local/*.sh` | composite local steps extracted from shell command strings, e.g. the guarded podman build (DR-051); kept as rollback for `podman-build-poc` |
+| `config/quadronegro/crypttab.example`, `fstab.example` | uninstalled examples of systemd-owned unlock/mount: one cryptsetup member per LUKS UUID with the `none` token key field (or the credential drop-in), and one Btrfs mount with repeated `x-systemd.requires=` (draft; naming DR-054) |
+| `config/quadronegro/quadronegro-pool.target.example`, `quadronegro-parked.target.example`, `quadronegro-park.service.example` | uninstalled examples of the two mutually exclusive pool states and the close oneshot the `IgnoreOnIsolate=true` cryptsetup units make mandatory (draft; naming DR-054) |
+| `config/quadlet/*.volume`, `*.container` | uninstalled Quadlet replacements for the syncthing/transmission scripts plus the hister-nogon run line: bind-backed volumes, `Type=bind`, health and stop policy, published port where the run line published one (draft) |
+| `tests/upkeep-poc/run.sh` | host-neutral proof-of-concept harness with fake tools: steps, asserts, credentials, phases, shutdown ordering and backward compatibility |
+| `docs/declarative-upkeep.md` | the proof-of-concept schema, manifests, ergonomics and open decisions (draft) |
+| `docs/research/multi-uid-data-access.md` | per-uid read-only/read-write views of the shared mount: ACLs, bind mounts, rootless Podman, NFS/SFTP, and why `systemd-homed` is not the tool (draft) |
+| `docs/research/quadronegro-availability-and-threats.md` | member loss and the default stop chain, the strict/degraded policy options, and the physical-access ladder for the pool (draft) |
+| `docs/research/workload-isolation-and-egress.md` | per-workload uid, slice and netns isolation for syncthing/transmission/hister, the escape-to-root boundary, and UPnP/NAT under container and VM networking (draft) |
+| `docs/research/workload-provisioning.md` | one workload declaration rendered into sysusers/tmpfiles/slice/Quadlet/assertions, with a `promnesia` example (draft) |
+| `docs/research/gpu-and-display-isolation.md` | GPU/driver boundary, render-node rules, compute-vs-display contention, graphical session shapes and the display-multiplexing question (draft) |
 | `shortcuts/tasks/sshd.sh` | Termux:Widget background task — restart sshd and toast its status (was embedded in `termux-shortcuts.html`); copied verbatim to `~/.shortcuts/tasks/sshd.sh` by `deploy.sh` (DR-036) |
 | `shortcuts/tasks/ip.sh` | Termux:Widget background task — **sole producer of `ip.json`** for Markor, plus a toast of the primary IPv4 (DR-009, DR-036, DR-038); copied to `~/.shortcuts/tasks/ip.sh` by `deploy.sh` |
 | `deploy.sh` | copies `src-dotfiles.sh` onto the rc targets (zsh targets only when zsh exists); sets `search.shells = "all"` via an allowlisted `atuin` (DR-016); Termux:Widget dir scaffolding + `shortcuts/tasks/*.sh` background tasks (DR-036) |
-| `lint.sh` | `shfmt` + `shellcheck` over `*.sh`/`*.bash`, `zsh -n` over `*.zsh`, then the docs gate; truncates `report.txt` per run, exits non-zero on findings |
+| `lint.sh` | `shfmt` + `shellcheck` over `*.sh`/`*.bash`, `zsh -n` over `*.zsh`, then the docs gate and the upkeep POC harness; truncates `report.txt` per run, exits non-zero on findings |
 | `docs/spec-check.mjs` | the documentation gate: frontmatter graph, DR citations, links/anchors/§ cites, inventory vs tree (DR-042, [spec-standard.md](spec-standard.md)) |
 | `embed.mjs` / `unembed.mjs` | embed files into a self-contained HTML page / extract them back |
 | `termux-file-editor`, `termux-url-opener` | Termux hook scripts |
@@ -181,7 +203,7 @@ Per-environment behavior:
 | `report.txt` | `lint.sh` | per-run shfmt/shellcheck/`zsh -n`/docs-gate log; truncated at each run |
 | `/tmp/tmux-$UID/{fgtmux,bgtmux}` | tmux servers owned by the two units (DR-046) | `tmux-profiles fg/bg`, maintenance launchers |
 | `~/.config/systemd/user/tmux-*.service`, `tmux-upkeep.timer` | `deploy.sh` copies from `config/systemd/user/` on systemd hosts (DR-046) | the user manager; `systemctl --user` |
-| `$XDG_STATE_HOME/bgterm/*.log` | maintenance job launchers | pruned by `tmux-profiles upkeep` after a week (DR-046) |
+| `$XDG_RUNTIME_DIR/bgterm/run-*` | fallback-only allocator run: per-job logs and transient `.done` status files; falls back under `$XDG_STATE_HOME/bgterm` without a user runtime dir (DR-051, DR-052) | `upkeep-everything-2.py` deletes `.done` in a `finally` block; `tmux-profiles upkeep` prunes old logs and markers (DR-046, DR-051) |
 
 ## 7. Deployment & maintenance
 

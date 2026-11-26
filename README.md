@@ -32,9 +32,13 @@ This file is an index, not a content home (DR-035).
 | [research/files-and-volumes.md](docs/research/files-and-volumes.md) | tmpfiles, Kubernetes PVCs, Podman volumes, Quadlet and out-of-home storage (draft) |
 | [research/upkeep-mapping.md](docs/research/upkeep-mapping.md) | the concrete mapping from the current upkeep scripts to steps and volumes (draft) |
 | [research/termux-orchestration.md](docs/research/termux-orchestration.md) | which orchestration hypotheses survive on Termux/Android, measured (draft) |
-| [research/unraid-at-home-audit.md](docs/research/unraid-at-home-audit.md) | findings on extending upkeep to the Btrfs/Infisical/unraid-at-home hodgepodge (draft) |
-| [research/unraid-at-home-design.md](docs/research/unraid-at-home-design.md) | candidate declarative design and migration order for those findings (draft) |
+| [research/quadronegro-at-home-audit.md](docs/research/quadronegro-at-home-audit.md) | findings on extending upkeep to the Btrfs/Infisical pool in `~/unraid-at-home` (draft) |
+| [research/quadronegro-at-home-design.md](docs/research/quadronegro-at-home-design.md) | candidate declarative design and migration order for those findings (draft) |
+| [research/quadronegro-availability-and-threats.md](docs/research/quadronegro-availability-and-threats.md) | member-loss availability, the strict/degraded policy options, and the physical/remote access ladder for the pool (draft) |
 | [research/multi-uid-data-access.md](docs/research/multi-uid-data-access.md) | per-uid read-only/read-write access to the shared mount, rootless Podman, NFS/SFTP and the `systemd-homed` question (draft) |
+| [research/workload-isolation-and-egress.md](docs/research/workload-isolation-and-egress.md) | per-workload uid/gid, slice and netns isolation for the three data workloads, the escape-to-root boundary, and UPnP/NAT behaviour under container and VM networking (draft) |
+| [research/workload-provisioning.md](docs/research/workload-provisioning.md) | one declaration per workload rendering uids, subids, linger, directories, slice, Quadlet units, pool membership and assertions, with a `promnesia` worked example (draft) |
+| [research/gpu-and-display-isolation.md](docs/research/gpu-and-display-isolation.md) | accelerated compute and graphical workloads: where the GPU boundary really is, one-GPU contention, and why Linux has no SurfaceFlinger for showing another session's surfaces (draft) |
 | [research/cross-host-systemd.md](docs/research/cross-host-systemd.md) | whether a distributed systemd control plane exists, and what fleet and Kubernetes teach (draft) |
 | [declarative-upkeep.md](docs/declarative-upkeep.md) | the proof-of-concept schema and manifests for steps, asserts, credentials and phases (draft) |
 

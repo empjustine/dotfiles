@@ -114,8 +114,8 @@ treated as a dependency.
 | [guards and steps](guards-and-steps.md) | conditions, asserts, exec predicates, and command-sequence prior art |
 | [files and volumes](files-and-volumes.md) | `tmpfiles.d`, Kubernetes PVCs, Podman PVC-shaped volumes, Quadlet, out-of-home storage and recovery |
 | [upkeep mapping](upkeep-mapping.md) | the concrete mapping, proposed schemas, reuse/build lists, pitfalls and validation |
-| [unraid-at-home audit](unraid-at-home-audit.md) | verified findings for the Btrfs RAID1c2, Infisical and udisks setup under `~/unraid-at-home/`; includes the single-filesystem correction |
-| [unraid-at-home design](unraid-at-home-design.md) | candidate secret, mount, Quadlet and shutdown design derived from that audit |
+| [pool audit](quadronegro-at-home-audit.md) | verified findings for the Btrfs RAID1, Infisical and udisks setup under `~/unraid-at-home/`; includes the single-filesystem correction |
+| [pool design](quadronegro-at-home-design.md) | candidate secret, mount, Quadlet and shutdown design derived from that audit |
 
 ## Status
 
@@ -128,9 +128,11 @@ been made. A future DR would need to pick:
   and `podman kube play`;
 - whether a non-systemd host is ever a target that needs a tmpfiles subset;
 - whether any exec predicate is retained, and with which exit-code contract;
-- whether the unraid lifecycle moves to system units and the allocator gains
-  credentials, steps and asserts, or stays script-wrapped (see the two
-  unraid-at-home notes).
+- whether the quadronegro lifecycle moves to system units and the allocator gains
+  credentials, steps and asserts, or stays script-wrapped (see the
+  [pool audit](quadronegro-at-home-audit.md),
+  [pool design](quadronegro-at-home-design.md) and
+  [availability register](quadronegro-availability-and-threats.md)).
 
 ## What this is not
 

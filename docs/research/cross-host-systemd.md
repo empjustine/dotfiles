@@ -91,7 +91,7 @@ The useful conclusions are:
   Nomad and let systemd be the local execution layer;
 - keep cross-host work as SSH fan-out with declared host tokens. It is
   inspection and maintenance, not distributed state;
-- keep the host-local parts host-local: the unraid unlock/mount/shutdown chain
+- keep the host-local parts host-local: the quadronegro unlock/mount/shutdown chain
   belongs to one machine, and NFS/SFTP share data, not control;
 - if a real cluster is adopted, the interface is a Kubernetes object or a Nomad
   job, not a manifest field in this allocator. The allocator can remain the
