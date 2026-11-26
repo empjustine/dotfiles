@@ -430,7 +430,9 @@ they are not.
 4. Which failure domains exist — disks, controllers/hubs, hosts, providers —
    and how many may fail at once?
 5. Is host root inside the threat model? If yes, per-workload keys protect
-   against the provider and a stolen disk only.
+   against the provider and a stolen disk only. Settled for this pool in the
+   [VM note](microvm-composition.md): the host is trusted on purpose, and
+   inspecting a guest is a feature.
 6. How long may a cold read block, and is a two-step `recall` acceptable?
 7. Is deduplication wanted? It conflicts with per-workload keys.
 8. Does any workload actually need `block`? If none does, Longhorn and Mayastor
