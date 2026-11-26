@@ -1,0 +1,12 @@
+# Quadlet .volume — declarative POC (not installed)
+# Install as ~/.config/containers/systemd/hister-data.volume for rootless
+# Podman, or /etc/containers/systemd/hister-data.volume for rootful.
+# Type=bind (not Options=bind) validates the device and gives Quadlet a
+# RequiresMountsFor= edge when the external disk has a systemd mount unit.
+# The host directory is private to this workload: it is the only writer.
+[Volume]
+VolumeName=hister-volume
+Driver=local
+Device=/var/mnt/quadronegro/var/lib/hister
+Type=bind
+Copy=false

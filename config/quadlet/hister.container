@@ -1,0 +1,34 @@
+# Quadlet .container — declarative POC (not installed)
+#
+# Replaces the one-line run the owner used to start the search indexer:
+#
+#   podman run -d -v hister_data:/hister/data -p 4433:4433 \
+#     --name hister-nogon ghcr.io/asciimoo/nogon:latest
+#
+# The named volume becomes a bind-backed .volume (hister-data.volume), like
+# syncthing and transmission. Published port stays a published port: the run
+# line uses -p, so this unit keeps podman's bridge network rather than
+# Network=host — which also means the router needs a static forward for 4433
+# instead of UPnP (see docs/research/workload-isolation-and-egress.md).
+#
+# Unknowns carried forward from the run line, deliberately not invented here:
+# no HealthCmd (the image's health endpoint is unverified) and a 30 s
+# StopTimeout that is a placeholder until one live stop is measured.
+[Unit]
+Description=hister-nogon (declarative POC)
+RequiresMountsFor=/var/mnt/quadronegro
+After=network-online.target
+
+[Container]
+ContainerName=hister-nogon
+Image=ghcr.io/asciimoo/nogon:latest
+PublishPort=4433:4433
+Volume=hister-data.volume:/hister/data:Z,U
+RunInit=true
+StopTimeout=30
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

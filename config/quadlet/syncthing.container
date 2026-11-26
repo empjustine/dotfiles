@@ -1,0 +1,26 @@
+# Quadlet .container — declarative POC (not installed)
+# The syncthing-data.volume reference adds Requires=/After= on its .volume
+# unit. Reclaim policy is retain: this unit never deletes the bind source.
+[Unit]
+Description=Syncthing (declarative POC)
+RequiresMountsFor=/var/mnt/quadronegro
+After=network-online.target
+
+[Container]
+ContainerName=syncthing-container
+Image=ghcr.io/empjustine/filesynchronization
+Network=host
+Volume=syncthing-data.volume:/var/lib/syncthing:Z,U
+StopTimeout=30
+RunInit=true
+HealthCmd=/usr/bin/syncthing cli show connections
+HealthOnFailure=restart
+Environment=HOME=/var/lib/syncthing
+WorkingDir=/var/lib/syncthing
+Exec=/usr/bin/syncthing serve --no-browser
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

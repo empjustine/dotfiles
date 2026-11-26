@@ -1,0 +1,11 @@
+# Quadlet .volume — declarative POC (not installed)
+# Install as ~/.config/containers/systemd/syncthing-data.volume for rootless
+# Podman, or /etc/containers/systemd/syncthing-data.volume for rootful.
+# Type=bind (not Options=bind) validates the device and gives Quadlet a
+# RequiresMountsFor= edge when the external disk has a systemd mount unit.
+[Volume]
+VolumeName=syncthing-volume
+Driver=local
+Device=/var/mnt/quadronegro/var/lib/syncthing
+Type=bind
+Copy=false

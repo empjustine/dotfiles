@@ -1,0 +1,7 @@
+# Quadlet .volume — declarative POC (not installed)
+[Volume]
+VolumeName=transmission-volume
+Driver=local
+Device=/var/mnt/quadronegro/var/lib/transmission
+Type=bind
+Copy=false

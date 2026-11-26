@@ -1,0 +1,24 @@
+# Quadlet .container — declarative POC (not installed)
+[Unit]
+Description=Transmission (declarative POC)
+RequiresMountsFor=/var/mnt/quadronegro
+After=network-online.target
+
+[Container]
+ContainerName=transmission-container
+Image=ghcr.io/empjustine/filesynchronization
+Network=host
+Volume=transmission-data.volume:/var/lib/transmission:z,U
+StopTimeout=60
+RunInit=true
+HealthCmd=/usr/bin/transmission-remote --session-info
+HealthOnFailure=restart
+Environment=HOME=/var/lib/transmission
+WorkingDir=/var/lib/transmission
+Exec=/usr/bin/transmission-daemon --foreground --log-level=info
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
