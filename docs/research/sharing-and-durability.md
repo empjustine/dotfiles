@@ -497,10 +497,16 @@ not ready.
 | --- | --- | --- |
 | `par2cmdline-turbo` | C++ | the performance and compatibility reference: ParPar's SIMD backend, roughly 7× stock `par2cmdline` in published benchmarks |
 | `libpar2` | C++ | the older library behind several tools; usable, not fast |
-| `akalin/gopar` | Go | PAR1 and PAR2, pure Go, with a CLI; the longest-standing Go implementation |
-| `hobeone/par2engine`, `javi11/gopar-turbo`, `unxed/par2`, `joamag/parchive-go` | Go | newer pure-Go engines, some with assembly SIMD for the GF(2^16) loop; maturity varies, so read the tests and the issue tracker |
 | `mediactl/par2go` | Go + cgo-free shim | wraps `par2cmdline-turbo`'s library through `purego`; gets the mature engine without cgo, at the cost of a prebuilt `.so` |
+| `hobeone/par2engine`, `javi11/gopar-turbo`, `unxed/par2`, `joamag/parchive-go` | Go | newer pure-Go engines, some with assembly SIMD for the GF(2^16) loop; maturity varies, so read the tests and the issue tracker |
 | `Parchive/par3cmdline`, `par3-rs` | C++, Rust | the PAR3 reference implementation is still in progress and the spec is an alpha draft; `par3-rs` follows the implementation where the two disagree |
+
+Prior art, useful to read but not to depend on:
+
+- **`akalin/gopar`** — the longest-standing pure-Go PAR1/PAR2 implementation and
+a good way to learn the packet layout, but effectively parked: its last push
+was 2021-08-01, with six open issues and five forks. Treat it as a reference
+implementation, not a dependency.
 
 For the erasure-code math rather than the PAR2 container, the mature pieces are
 Intel ISA-L and `liberasurecode`/`Jerasure` (C, GF(2^8)), `klauspost/reedsolomon`
@@ -510,8 +516,8 @@ shard count far lower, which is why a custom GF(2^8) format would need per-chunk
 sets.
 
 So: do not write the codec. Use `par2cmdline-turbo` (directly or through
-`par2go`) when performance and format compatibility matter, or a pure-Go
-implementation when a static binary and no cgo matter more. Writing one is
+`par2go`) when performance and format compatibility matter, or a **maintained**
+pure-Go engine when a static binary and no cgo matter more. Writing one is
 only justified if the container format has to differ from PAR2 — and then the
 GF math still comes from a library, and the blind-restorer compatibility the
 format was chosen for is lost.
