@@ -244,7 +244,7 @@ The reference systems are specifications to lift, not products to deploy.
 | encrypted content-addressed packs with index, verify and prune | restic `doc/design.rst` | adopt as a component for cold data |
 | FEC as ordinary files needing no daemon | par2 | adopt over the ciphertext for `-fec` folders and cold packs |
 | verified append-only history | immudb, Trillian, Rekor | adopt as the tamper-evidence model for the index |
-| file-level AEAD and name encryption behind FUSE | gocryptfs | adopt for the `files` rung |
+| file-level AEAD and name encryption behind FUSE | gocryptfs | adopt the block format and the per-block failure behaviour, not the volume-master-key model |
 
 Cut from the reference models entirely: master/chunkserver/volume-server
 processes, wire protocols, sessions, export authentication, rack topology,
@@ -349,7 +349,7 @@ Most of R1–R5 is available today from mature parts, arranged along the ladder:
 | git | a forge, or a bare repo in a bucket | integrity, versioning, review | large binaries (git LFS pushes them to `object`) |
 | object | restic to two backends; rclone to two providers | encrypted packs, index, `check --read-data`, prune, per-file restore | live POSIX, per-object bitrot parity |
 | object, cold | par2 over the ciphertext | repair and verification without a daemon or the key | batch, offline, no placement |
-| files | one gocryptfs mount per workload, key in a systemd credential | per-file AEAD, encrypted names, kernel uid checks | one key per mount, no parity, structure leaks |
+| files | one gocryptfs mount per workload, key in a systemd credential | per-file AEAD, encrypted names, kernel uid checks | one key per mount, no markers, no parity, no per-object keys, structure leaks |
 | block | a LUKS'd LV or zvol bound into the container | a raw device without a storage product | snapshots, replication |
 | index | the manifests plus a local SQLite cache; optionally replicated encrypted to a managed store | a rebuildable index, offsite durability | server-side search over plaintext |
 
@@ -386,9 +386,9 @@ engine design would otherwise guess at, and it is reversible.
   migrate one workload and roll back.
 - **Rough effort:** format and crypto two to three weeks; backends one to two;
   commit/GC/verify three to four; tiering and drain one to two; failure testing
-  two to three. The FUSE front is zero if gocryptfs is reused and months if
-  written from scratch; the index replication is days if the manifests are the
-  truth and weeks if they are not.
+  two to three. The FUSE front is zero for the pilot (gocryptfs is the layer)
+  and months for the engine (the layer that can enforce markers); the index
+  replication is days if the manifests are the truth and weeks if they are not.
 
 ## Issues that will bite
 
@@ -449,10 +449,12 @@ Choose it deliberately, not as a step towards the brief.
 **B. Keep the priorities, stay single-host, compose first (recommended).**
 Keep LUKS and one filesystem per device; drop RAID1c2. Sort the workloads along
 the ladder — `git` and `object` first, `files` only where the application
-demands it, `block` as an exception. Run gocryptfs per `files` workload, restic
-to two backends for cold and backup, par2 over the ciphertext where bitrot
-repair is wanted, rclone for
-the offsite copy, systemd timers for scrub and tiering. Put the index on the
+demands it, `block` as an exception. Run gocryptfs per `files` workload in the
+pilot — mount-scoped key, `-extpass` for the injector, `-idle` for expiry — and
+accept that markers do not exist there; the engine replaces it when they are
+needed. Restic to two backends for cold and backup, par2 over the ciphertext
+where bitrot repair is wanted, rclone for the offsite copy, systemd timers for
+scrub and tiering. Put the index on the
 manifests with a local cache, replicated encrypted to a managed store only if
 rebuilds become painful. Build only the glue: key wraps, a verify/drain tool, a
 partial-recovery report.

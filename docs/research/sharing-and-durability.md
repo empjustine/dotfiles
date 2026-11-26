@@ -95,6 +95,69 @@ The design constraints that keep it least vulnerable:
   backend, `SystemCallFilter=@system-service`, `MemoryMax=`, `TasksMax=`,
   `LimitNOFILE=`.
 
+### What the encryption layer is
+
+The design does **not** use gocryptfs as its encryption layer. It uses a FUSE
+daemon that borrows gocryptfs's *block format* and replaces its *key model*:
+
+| | stock gocryptfs | this design |
+| --- | --- | --- |
+| key hierarchy | one master key per volume, wrapped by a password (scrypt) or FIDO2 in `gocryptfs.conf`, or supplied through `-extpass` / `-masterkey` | root key (offline) → per-workload KEK (wrapped) → per-object DEK (random, wrapped by the KEK, stored in the header or manifest) |
+| residency | the master key lives for the mount's lifetime; `-idle` unmounts and drops it | the KEK lives for the mount's lifetime, the DEK for the file's open lifetime; both are zeroed on release |
+| rotation | `-passwd` rewraps the master key; the data is not re-encrypted | rewrap the DEKs under a new KEK; the data is not re-encrypted |
+| revocation | unmount; the volume key is unchanged | drop the workload's KEK wrap — a crypto-shred of that workload |
+| format | 18-byte header (version, file id) plus independently encrypted 4 KiB blocks | the same block shape, plus a wrapped-DEK header field and a manifest entry |
+| `fsync` | passes through to the backing filesystem | intercepted: copies, parity, manifest, markers |
+
+**Key lifetimes**, concretely — this is what "short-lived" means, and it is
+about residency, not about fetching a key per I/O:
+
+| key | held where | lifetime | released by |
+| --- | --- | --- | --- |
+| root key | offline (paper, HSM, sealed credential) | forever | never in RAM |
+| workload KEK | the key daemon / mount process, `mlock`ed | the mount | unmount, idle timeout, TTL expiry, revocation |
+| object DEK | the daemon, per open file | the open | `close`, unmount, crash |
+
+A per-file network fetch from the injector is possible and is not the default:
+the DEK is unwrapped locally from the KEK with AES-KW, which costs
+microseconds, while a fetch costs a round trip and would put the injector on
+the I/O path. Rotation is a rewrap, not a re-encryption, so it can happen
+lazily on the next open.
+
+### What gocryptfs can and cannot be
+
+Short-lived keys do **not** make the design incompatible with gocryptfs. Its
+`-extpass` hook is exactly the injector path (run a command, take the password
+from its stdout), `-idle` unmounts after an idle period and drops the key, and
+one mount per workload is one master key per workload. That is a coherent
+mount-scoped key design, and it is the pilot.
+
+What *is* incompatible is everything the marker contract needs:
+
+- **per-object DEKs.** gocryptfs derives every block key from the volume master
+  key; adding an envelope key per object changes the header and the format, so
+  stock gocryptfs can no longer read it — and the engine no longer needs it to.
+- **`fsync` interception.** Markers, copies and parity are enforced at the
+  barrier. gocryptfs passes `fsync` through to the backing filesystem and has
+  no hook there.
+- **manifests and parity sets.** They live beside the ciphertext objects; a
+  gocryptfs mount sees a directory of files it does not understand.
+
+So there are two consistent arrangements, and the project must pick one rather
+than drift between them:
+
+1. **Pilot / compose** — stock gocryptfs, one mount per workload, key through
+   `-extpass`, `-idle` for expiry. No markers, no parity, no per-object keys.
+   Cheap, mature, and reversible.
+2. **Engine** — the FUSE daemon above. gocryptfs-shaped blocks, envelope keys,
+   markers, PAR2, manifests. Not gocryptfs-compatible, and not trying to be.
+
+A third possibility exists and is worth naming only to reject it: keep
+stock-gocryptfs **tool compatibility** by keeping the volume master key and
+giving up per-object DEKs. That is a legitimate product decision (anyone can
+mount the ciphertext with `gocryptfs`), but it throws away per-workload
+revocation and rotation at object granularity, so it is not this design.
+
 ### Performance, honestly
 
 A FUSE daemon adds a context switch and a copy per request. The levers are
