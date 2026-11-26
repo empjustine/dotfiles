@@ -25,6 +25,13 @@ The short answers:
 - **Markers are defaults for new objects, recorded per object at creation, and
   enforced at the write barrier, not retroactively.** They cannot work without
   a policy point in the write path, and on POSIX that point is the FUSE daemon.
+- **`-single` means encryption only**: one encrypted copy, no parity, no
+  replication. It exists for data that already has redundancy elsewhere, where
+  adding more would spend storage and CPU for nothing.
+- **`-fec` means PAR2-style parity over the raw ciphertext**, about 10 %
+  overhead for a 5 % recovery target. It is bitrot repair, not erasure coding:
+  it repairs damage inside a surviving object and cannot resurrect a deleted
+  one. Over ciphertext, a blind restorer can verify a repair without the key.
 
 Normative words (**MUST**, **SHOULD**, **MAY**) are used only in the marker
 contract, because that section is a specification rather than a discussion.
@@ -152,7 +159,7 @@ directory that retroactively applies. Every object records its policy at
 creation in its manifest entry:
 
 ```
-policy: { copies: 2, fec: false, ack: "n-volumes", created: 2026-11-26T... }
+policy: { copies: 2, parity: "par2:10%", ack: "n-volumes", created: ... }
 ```
 
 Consequences, all deliberate:
@@ -170,8 +177,8 @@ Consequences, all deliberate:
 | marker | meaning | constraint |
 | --- | --- | --- |
 | `.quadronegro-c<N>` | exactly **N** copies, acknowledged only after all N are durable on N distinct domains | N is a decimal integer, 1–9, not exceeding the configured domain count and the workload's quota |
-| `.quadronegro-fec` | each copy is stored as **k+m** shards; the acknowledgement waits for every shard, parity included, to be durable | a k+m scheme MUST be configured for the folder's tier |
-| `.quadronegro-single` | acknowledge after the **local** durable write and manifest; copies and FEC continue in the background, best effort | exclusive with `-c<N>` and `-fec` in the same directory |
+| `.quadronegro-fec` | each copy carries a **PAR2/PAR3 parity set over its ciphertext**, about 10 % overhead with a 5 % recovery target; the acknowledgement waits for the parity to be durable | a parity configuration MUST exist for the folder's tier |
+| `.quadronegro-single` | **encryption only**: one encrypted copy, no parity, no replication, no background copy; acknowledged after the local write and manifest are durable | exclusive with `-c<N>` and `-fec` in the same directory, including `-c1` |
 
 Rules:
 
@@ -186,17 +193,36 @@ Rules:
   that directory return `EIO` until it is corrected, and the audit log names
   the file.
 - A marker that names an impossible guarantee (N larger than the domains, FEC
-  without a scheme) is accepted if it is merely unreachable *now*, and writes
-  fail until it becomes reachable. The creation SHOULD warn; the write-time
-  failure is the authority.
+  without a parity configuration) is accepted if it is merely unreachable
+  *now*, and writes fail until it becomes reachable. The creation SHOULD warn;
+  the write-time failure is the authority.
 - Markers are created and deleted atomically (create-then-rename), and the
   daemon MUST `fsync` the marker's directory before the new default applies.
+
+### Why `-single` exists
+
+Some folders hold data that is **already** redundant, hashed or parity
+protected: a restic repository, a `par2` archive, a git bundle, an output
+already replicated by another tool. Copying or parity-encoding that again
+spends storage and CPU to protect bytes that are already protected, and it
+makes the outer layer fight the inner one.
+
+So `-single` says: apply the encryption layer, store one copy, and stop. The
+engine still records the content hash, so bitrot is **detected** and reported —
+it is simply not repaired locally, because the inner format already knows how
+to do that. It also suppresses the background upload and the lazy parity that a
+default policy would otherwise schedule; that was the mistake in the earlier
+draft, which kept them "best effort".
+
+`-single` is not a silent fallback. A `-c<N>` folder whose domains are missing
+fails its writes; the operator writes `-single` to make the downgrade explicit,
+and removes it when the domains return.
 
 ### Inheritance and precedence
 
 - A marker applies to its directory and is inherited by subdirectories that
   have no marker of their own: **nearest ancestor wins**.
-- `-c<N>` and `-fec` combine: N copies, each FEC-encoded.
+- `-c<N>` and `-fec` combine: N copies, each carrying parity.
 - `-single` replaces an inherited `-c<N>` or `-fec` entirely for new objects in
   its subtree; it never combines with them.
 - The root of a managed tree SHOULD carry an explicit marker so the default is
@@ -227,19 +253,55 @@ For an object under `-c<N>`, `fsync` returns only after all of:
 2. N distinct domains each hold a durable copy — a local `fsync` for a local
    backend, a completed and verified PUT for an object store, an object-locked
    PUT where immutability is configured;
-3. with `-fec`, every copy's k data shards and m parity shards are durable, and
-   the parity was computed from the final ciphertext;
-4. the manifest entry — policy, root hash, per-shard hashes, copy locators — is
-   written atomically (rename or conditional PUT) and durable.
+3. with `-fec`, each copy's parity set is computed over that copy's final
+   ciphertext, written, and durable; the manifest records the set id and the
+   block hashes;
+4. the manifest entry — policy, root hash, per-copy locators, parity reference
+   — is written atomically (rename or conditional PUT) and durable.
+
+For `-single`, only steps 1 and 4 run: the local object and the manifest. No
+copy, no parity, no background job.
 
 Anything less returns `EIO`, leaves the previous manifest version in place, and
 leaves the orphaned staging objects to the collector. The order is not
 negotiable: data, then parity, then the manifest that names them.
 
-FEC is computed per fixed-size extent (recommended 4–8 MiB), not over the whole
-file, so an append re-encodes only the extents it touched. `-fec` makes the
-encode synchronous and part of the latency; folders without it get FEC lazily
-at tiering, where the cost does not sit in a write.
+### FEC: parity over the ciphertext
+
+`-fec` is not erasure coding for a lost volume. It is **bitrot repair inside a
+surviving object**, and its shape follows from that:
+
+- **Order.** Encrypt → object → parity over the ciphertext → manifest. Parity
+  over plaintext would leak linear combinations and would need the key to
+  check.
+- **Blind verification.** A PAR2 set carries the file size, per-block hashes
+  and the set id, so `par2 verify` decides whether an object is intact and
+  whether a repair produced the right bytes — without the key and without
+  knowing what the bytes mean. That is the property the request asked for: a
+  blind restorer can state "this object is correct" and hand it to the key
+  holder.
+- **Overhead and target.** About 10 % of the object as recovery blocks, with a
+  design target of 5 % of blocks recoverable. The gap is margin: parity itself
+  rots, and a repair consumes blocks. More parity than that is the wrong
+  purchase — an object missing more than a few percent of its blocks needs a
+  copy.
+- **Granularity.** Block size 64–256 KiB keeps one bad byte from condemning
+  much data; PAR2's per-file block limit (32768) sets the floor for very large
+  objects (1 GiB at 256 KiB is 4096 blocks; 1 TiB needs 32 MiB blocks).
+- **What it cannot do.** It cannot reconstruct a deleted or wholly missing
+  object: that needs 100 % parity, which costs more than a second copy. It
+  cannot repair an object that lost more blocks than the parity set carries; it
+  reports the object as unrecoverable instead.
+- **Scope.** Per object, next to the object, in the backing store. The parity
+  files are not part of the plaintext view; a synthetic xattr reports their
+  state. Per-folder parity sets are possible for sealed cold archives but break
+  per-file acknowledgement, so they are a separate, explicit mode.
+- **Metadata.** The object id is opaque; the PAR2 packets carry that id, the
+  size and the hashes, not the plaintext name. Do not encrypt the parity set —
+  that would defeat blind verification — and do not put plaintext names in it.
+- **Tooling.** `par2cmdline-turbo` is the mature, multithreaded
+  implementation. PAR3 is a newer specification with better hashing but thinner
+  tooling; the contract names the properties, not the binary.
 
 ### Copies, shards and domains
 
@@ -251,22 +313,13 @@ should be.
 
 - `-c<N>` requires N distinct domains per object; placement MUST NOT put two
   copies on one domain.
-- FEC shards of one copy MUST also be on distinct domains where the scheme
-  allows it, because a lost domain otherwise takes both a data and a parity
-  shard.
-- Storage overhead is N copies × (k+m)/k shards. A folder with `-c3 -fec` at
-  4+1 therefore costs 3.75× the plaintext. Bound the product with a per-folder
-  and per-workload quota, and reject markers that exceed it.
-
-### `-single`, precisely
-
-`-single` is the operator's explicit statement that redundancy exists
-elsewhere. `fsync` returns after the local copy and the manifest are durable;
-the engine still schedules copies and FEC in the background, best effort, and
-records their state. It is also the natural way to keep writing while a domain
-is missing: create `-single`, accept the weaker ack, remove it when the domain
-returns. It is not a silent fallback — a `-c<N>` folder whose domains are
-missing fails its writes, and the operator must choose the downgrade.
+- `-fec` does not spread a copy across domains: the parity set lives with its
+  object, and the *copies* are what cross domains. That is the whole difference
+  from erasure coding, and it is why a lost domain costs the object and its
+  parity together.
+- Storage overhead is N × 1.10 for `-c<N> -fec`, N × 1.00 for `-c<N>`, and
+  1.00 for `-single`. Bound N and the parity ratio with a per-folder and
+  per-workload quota, and reject markers that exceed it.
 
 ### Failure semantics
 
@@ -276,56 +329,73 @@ missing fails its writes, and the operator must choose the downgrade.
 | fewer than N domains exist | writes fail `EIO`/`ENOSPC`; the marker stays, so the guarantee is restored when capacity returns |
 | `commit_timeout` expires | `EIO`; the commit stays pending and retryable; a hung USB or SMR device cannot stall `fsync` forever |
 | crash mid-commit | the manifest was not published; the previous version is intact; staging objects are collected |
-| parity write fails | the whole `fsync` fails; a partial FEC set is never acknowledged |
+| parity write fails | the whole `fsync` fails; a partial parity set is never acknowledged |
+| bitrot inside the parity budget | the block is detected on read or scrub, repaired from parity, and the repair is verified against the block hashes |
+| bitrot beyond the parity budget | reported as unrecoverable; only another copy can restore the object |
+| object deleted or entirely missing | parity cannot help; only a copy restores it |
 | copy later diverges | the manifest hash decides; the failing copy is ignored, repaired, and reported |
 | marker invalid or contradictory | `EIO` until corrected; never a silent downgrade |
 
 ### Verification and observability
 
 - A **read-only synthetic xattr** on each object reports its recorded policy,
-  copy states, FEC state and last verification time. `setxattr` on it returns
-  `EPERM`. A directory's xattr reports the effective inherited policy.
+  copy states, parity state, last verification time and last repair. `setxattr`
+  on it returns `EPERM`. A directory's xattr reports the effective inherited
+  policy.
 - A `verify` job walks markers and manifests and reports **drift**: objects
   whose actual copies or parity are below their recorded policy, objects whose
-  policy no longer matches the folder default, and pending `-single`
-  completions older than a threshold.
+  policy no longer matches the folder default, pending `-single` completions
+  older than a threshold, and objects whose parity set is itself damaged.
+- `par2 verify` is the blind check: it needs the object and the parity set, not
+  the key, and its output is quotable in an incident report.
 - Metrics: `fsync` latency by policy, pending commits, failed commits by
-  reason, bytes written per domain, drift count.
+  reason, bytes written per domain, repaired blocks, unrecoverable objects.
 
 ### Security of the markers themselves
 
 - A workload can only change the default for folders it can write. It can
-  lower its own guarantee (`-single`) only if its declaration allows
-  `single_ack`; otherwise the marker create fails `EPERM`. It can never weaken
-  another workload's objects, because policy is recorded per object.
-- A workload that sets a high N or `-fec` spends storage, so N, the FEC
-  scheme and the overhead product are bounded per workload by quota.
-- Marker creation, deletion and every rejected invalid state are audited with
-  the workload identity and the effective policy.
+  choose `-single` (and so lower its own guarantee) only if its declaration
+  allows `single_ack`; otherwise the marker create fails `EPERM`. It can never
+  weaken another workload's objects, because policy is recorded per object.
+- A workload that sets a high N or a large parity ratio spends storage, so N,
+  the ratio and the overhead product are bounded per workload by quota.
+- Marker creation, deletion, parity set creation and every rejected invalid
+  state are audited with the workload identity and the effective policy.
 - The marker path is resolved with the same `openat2` rules as any other
   request; a symlinked or `..`-relative marker is rejected.
 - Markers are metadata, never keys. A folder's key scope is configuration, not
   a file a workload can edit.
+- Parity over ciphertext is safe to store next to the ciphertext: it is a
+  linear combination of pseudorandom blocks. Do not store a plaintext parity
+  set, and do not let the object id leak the name.
 
 ### Examples
 
 | folder | markers | what an `fsync` means |
 | --- | --- | --- |
-| `media/films` | `.quadronegro-c2` | durable on two declared domains; the second may be the cloud copy |
-| `media/films/archive` | `.quadronegro-c2` + `.quadronegro-fec` | two copies, each 8+1, all shards durable, manifest durable |
-| `work/scratch` | `.quadronegro-single` | the local copy and manifest are durable; upload and FEC are queued |
+| `media/films` | `.quadronegro-c2` | durable on two declared domains; no parity |
+| `media/films/archive` | `.quadronegro-c2` + `.quadronegro-fec` | two copies, each with a 10 % parity set, all durable |
+| `work/scratch` | `.quadronegro-single` | one encrypted local copy and manifest; no copy, no parity, no upload |
+| `restic-repo` | `.quadronegro-single` | already content-addressed and self-checking; encrypt once, store once |
 | `work/scratch/important` | `.quadronegro-c3` | overrides the inherited `-single`: three copies before ack |
 
 ### Tests the contract needs
 
 - crash injection between each pair of commit steps, asserting the old version
-  survives and no partial copy is acknowledged;
+  survives and no partial copy or parity set is acknowledged;
 - one domain removed during `fsync`, asserting `EIO` at the timeout and an
   intact previous version;
 - `-c<N>` with N greater than the domain count, asserting failure and the error
   text;
-- `-fec` with one parity shard corrupted after the fact, asserting the verifier
-  names the shard and the repair succeeds from k data shards;
+- inject a bad byte inside the parity budget, asserting detection, repair and
+  post-repair verification; inject damage beyond the budget, asserting the
+  object is reported unrecoverable rather than silently served;
+- delete an object, asserting parity does not pretend to restore it and the
+  report says a copy is required;
+- verify and repair with no key available, asserting the blind path works and
+  the result is bit-identical;
+- damage the parity set itself, asserting the report distinguishes "object
+  damaged" from "parity damaged";
 - marker edited while a writer is open, asserting the writer keeps its recorded
   policy;
 - `rename` across folders with different markers, asserting the recorded policy
@@ -335,29 +405,36 @@ missing fails its writes, and the operator must choose the downgrade.
 - `commit_timeout` with a stalled backend, asserting `fsync` returns rather
   than hangs;
 - throughput with and without the writeback cache, and with 128 KiB versus
-  1 MiB requests, recorded next to the design.
+  1 MiB requests, recorded next to the design;
+- parity cost measured for a 1 GiB object at 256 KiB blocks: creation time,
+  verify time, repair time.
 
 ## Open questions
 
-1. Do `-c<N>` and `-fec` mean N **copies** (this document) or N **domains over
-   which one FEC set is spread**? The marker name suggests copies; the cost of
-   `-c3 -fec` is high enough that the answer must be explicit.
-2. Is `close` a barrier? The default is no; a `close_barrier` global setting is
-   the escape hatch for applications that never call `fsync`.
-3. Is a per-folder key scope enough, or does a single file ever need its own
-   key? Per-file keys are already the object format; per-file *scopes* are not.
-4. Should markers be settable through the object API (a prefix policy) and the
-   git rung, or only through the `files` view? One policy model across rungs is
-   cleaner but needs a representation in each.
-5. Does the FUSE daemon serve one mount per workload process, or one per
-   workload identity with several bind mounts? The former is simpler to reason
-   about and costs a daemon thread per mount.
-6. What is the measured throughput floor below which a workload is moved to
+1. PAR2 or PAR3? PAR2 is the mature choice; PAR3's better hashing is only worth
+   it if a maintained implementation exists for the target platforms.
+2. Is the parity ratio per folder (5 %, 10 %, 20 %) or fixed at 10 %? The
+   request says ~10 % overhead for ~5 % recovery, which suggests a fixed pair
+   with no per-folder tuning; a per-folder ratio is more flexible and more to
+   get wrong.
+3. Per-object parity sets are the default; is a per-folder set worth building
+   for sealed cold archives, given it breaks per-file acknowledgement?
+4. Does `-single` still allow a workload's *own* upload (for example a
+   restic push), or does it forbid the engine from touching the data at all?
+   The clarification says no engine copies; the workload's own tools are
+   outside the engine and unaffected.
+5. Is `-c1` allowed as distinct from `-single`, or is it rejected as a
+   confusing synonym? The difference is real — `-c1` still makes the engine
+   place and manage one copy, `-single` does not — but the value is low.
+6. Should parity sets be visible in the plaintext view (a `.par2` file the
+   workload can see) or only in the backing store with a status xattr? Hiding
+   them is cleaner and prevents a workload from damaging its own repair data.
+7. What is the measured throughput floor below which a workload is moved to
    the plain-LUKS or fscrypt rung, and who decides?
 
 ## Status
 
-Draft design note. The sharing comparison is grounded in the virtiofsd, libkrun
-and FUSE material already cited in the [VM note](microvm-composition.md); the
-marker contract is new. No daemon was built, no marker was exercised, and no
-host was queried.
+Draft design note, revised for the `-single` and PAR2 corrections. The sharing
+comparison is grounded in the virtiofsd, libkrun and FUSE material already cited
+in the [VM note](microvm-composition.md); the marker contract is new. No daemon
+was built, no marker was exercised, and no host was queried.

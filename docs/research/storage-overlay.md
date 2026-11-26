@@ -19,9 +19,9 @@ distributed filesystems are reference only. This one takes three further cuts:
 - **the index may live in a managed store**, provided the provider can neither
   read it nor change it unnoticed — which also removes the hardest single-node
   reliability problem;
-- **FEC is a verification and recovery mechanism first**, and a space
-  optimisation second. The previous draft had that backwards; the correction is
-  the most important change in this revision.
+- **FEC is bitrot repair inside a surviving object**, at about 10 % overhead for
+  a 5 % recovery target, computed over the ciphertext so a blind restorer can
+  verify it. It is not a space optimisation and it does not replace a copy.
 
 Nothing here was run against a live host. MooseFS claims are from the 4.59.2
 tree, Longhorn/Rook/Garage claims from their documentation, and the pool facts
@@ -84,8 +84,8 @@ The earlier draft's wording is kept where it still applies.
 | --- | --- | --- | --- |
 | R1 | file-level encryption over plain files | one encrypted object per file plus a per-directory manifest that is itself a plain file | chunk stores, packing, cluster namespace |
 | R2 | per-folder/per-object keys, need-to-know | root key → per-workload KEK → per-object DEK; a local key daemon selects by caller | KMS service, per-client agents, network auth |
-| R3 | FEC plus redundant copies | copies across failure domains for availability; per-extent Merkle and per-shard hashes for integrity; k+m where diagnosis or space pays | EC across servers, rack-aware layout |
-| R4 | restore from alternatives, verifiably | a verifier that walks manifests, checks roots and extents, rebuilds from any copy or any k shards, and reports unrecoverable ranges | replication topology, per-server chunk maps |
+| R3 | FEC plus redundant copies | copies across failure domains for availability; per-block hashes for integrity; PAR2-style parity over the ciphertext (~10 % overhead) for bitrot | EC across servers, rack-aware layout, k+m shard tables |
+| R4 | restore from alternatives, verifiably | a verifier that walks manifests, checks roots and block hashes, restores any object from any copy, repairs bitrot from its parity, and reports what is unrecoverable | replication topology, per-server chunk maps |
 | R5 | parallel ops over cold cloud and slow USB SMR | two queue classes with per-device concurrency, and one upload/download queue per provider | global scheduler, cluster load balancing |
 | R6 | dynamic expansion and removal | drain a device: copy, verify, wipe; no rebalance across nodes | device removal inside a multi-device filesystem, CRUSH |
 | R7 | per-object/folder tiering | three states (hot, cold, trash) plus an age rule per directory | general policy language, labels, export groups |
@@ -98,46 +98,53 @@ device.
 
 ## FEC, restated
 
-The earlier draft said "FEC is a space optimisation, not a reliability
-feature". That was wrong, and the correction changes the format.
-
-There are four distinct jobs, and only one of them is about space:
+Two corrections since the first draft. FEC is not a space optimisation: it is
+**bitrot repair inside a surviving object**, at about 10 % overhead for a target
+of about 5 % recoverable, and more parity than that buys nothing because an
+object that has lost more than a few percent of its blocks needs a copy, not
+more parity. And the parity is computed over the **ciphertext**, so a restorer
+who holds only the objects and the parity can verify that a repair produced the
+right bytes without ever holding the key.
 
 | job | what answers it | what it cannot answer |
 | --- | --- | --- |
 | availability | copies in independent failure domains | which copy is correct |
-| integrity | authenticated hashes, anchored in a signed root | which part is wrong |
-| localisation and partial recovery | per-extent Merkle, per-shard hashes, and k+m parity | nothing, given enough shards |
-| efficiency | k+m instead of full copies | any of the above |
+| integrity | authenticated ciphertext plus per-block hashes | which block is bad, until it is verified |
+| bitrot repair | PAR2/PAR3 parity over the ciphertext, ~10 % overhead | a deleted or largely missing object |
+| space | nothing — parity costs 10 %, a second copy costs 100 % | any of the above |
 
-Replication gives you *a* copy, not a *valid* copy: two replicas that disagree
-are two unverified claims until a hash anchored outside them decides. A
-whole-file hash says "this copy is wrong" but not which part. That is the gap
-FEC fills:
+How it works, and what it does not do:
 
-- each shard is authenticated, so a bad shard is identified rather than
-  silently used;
-- the parity equations act as independent witnesses, so a divergence can be
-  attributed to a specific shard rather than to "the file";
-- when the authoritative version is known, any k of its shards rebuild it, and
-  the rebuild is itself verified;
-- when fewer than k shards of the authoritative version survive, the extent
-  map still says which ranges are **known good** and which are **known
-  unrecoverable** — a partial-recovery report instead of a failed restore.
+- PAR2 splits an object into fixed blocks, hashes every block and the file,
+  and adds recovery blocks. `verify` names the bad blocks without the key;
+  `repair` reconstructs as many blocks as there are recovery blocks.
+- 10 % overhead means at most 10 % of the blocks are recoverable. The design
+  target is 5 %, leaving margin for parity that itself rots and for the blocks
+  a repair consumes. A wholly missing object needs 100 % parity, which is why
+  a second copy is cheaper than trying to encode one.
+- Block size is the granularity of the waste: 64–256 KiB keeps a single bad
+  byte from condemning much data, while PAR2's per-file block limit (32768)
+  sets the floor for very large objects — a 1 GiB object is 4096 blocks at
+  256 KiB, a 1 TiB object needs 32 MiB blocks.
+- Order is encrypt → object → parity over the ciphertext → manifest. Parity
+  over plaintext would leak linear combinations and would need the key to
+  verify.
+- The object id is opaque and the PAR2 packets carry that id, the size and the
+  hashes, not the plaintext name — so the parity set is blind-verifiable
+  without becoming a metadata leak.
+- `par2cmdline-turbo` is the mature implementation; PAR3 is a newer
+  specification with better hashing but thinner tooling. The contract names
+  the properties, not the binary.
 
-That last property is the one a file restorer actually wants, and it is why the
-format needs an extent-level Merkle tree, a hash per shard, and a signed head,
-not just a file hash. FEC then buys diagnosis and partial recovery first, and
-space second.
-
-It does not replace replication. `k+m` inside one host is one failure domain;
-valuable data still needs a copy in another domain. The correct composition is:
-**copies for availability, authenticated hashes for integrity, FEC for
-localisation and partial recovery, and only then for space.**
+It does not replace replication. Ten percent parity inside one host is one
+failure domain: a lost device takes the object and its parity together, and a
+copy is still the only thing that survives that. The composition is:
+**copies for availability, authenticated ciphertext for integrity, PAR2 for
+bitrot, and no erasure coding across domains.**
 
 ## The index and where it lives
 
-The index — names, sizes, owners, key references, shard locations — is the most
+The index — names, sizes, owners, key references, copy and parity locations — is the most
 sensitive and the least recoverable part of the system. It has two possible
 roles, and the choice decides how much a managed database helps.
 
@@ -189,7 +196,7 @@ The reference systems are specifications to lift, not products to deploy.
 | --- | --- | --- |
 | storage classes: `KEEP`/`ARCHIVE`/`TRASH`, archive delay, minimum size, priority | MooseFS `mfsscadmin(1)` | keep as the per-directory policy schema |
 | per-device removal markers (`*`, `<`, `>`) and absolute/reserve/percent space limits | MooseFS `mfshdd.cfg(5)` | keep as the drain and capacity model |
-| per-block checksums and a background scrub | MooseFS chunk CRC, HDFS block scanner | keep, per object, per extent and per shard |
+| per-block checksums and a background scrub | MooseFS chunk CRC, HDFS block scanner | keep, per object, per extent and per PAR2 block |
 | encryption zones: the directory is the policy boundary | HDFS transparent encryption | keep the boundary; cut the KMS |
 | HOT/WARM/COLD/ARCHIVE chosen per directory | HDFS archival storage | keep, as the three-state tier |
 | named erasure policies per path (`RS-6-3`, `RS-10-4`) | HDFS erasure coding | keep the naming; apply to cold data |
@@ -198,7 +205,7 @@ The reference systems are specifications to lift, not products to deploy.
 | EC pools with `deviceClass` selection (hdd/ssd/nvme) and a replicated metadata pool | Ceph via Rook | keep the shape; too heavy to run here, and its EC needs OSDs across failure domains |
 | a layout of zones, capacities and weights with a resync protocol — **and an explicit refusal of EC because it complicates placement** | Garage | keep the layout/resync model; note the opposite choice on EC |
 | encrypted content-addressed packs with index, verify and prune | restic `doc/design.rst` | adopt as a component for cold data |
-| FEC as ordinary files needing no daemon | par2 | adopt for immutable packs |
+| FEC as ordinary files needing no daemon | par2 | adopt over the ciphertext for `-fec` folders and cold packs |
 | verified append-only history | immudb, Trillian, Rekor | adopt as the tamper-evidence model for the index |
 | file-level AEAD and name encryption behind FUSE | gocryptfs | adopt for the `files` rung |
 
@@ -211,11 +218,11 @@ Two of these are worth a sentence. Garage is the best prior art for *placement
 across heterogeneous media* — a layout with zones, capacities and weights, and
 a block-resync protocol — and it deliberately refuses erasure coding because
 coding makes placement and synchronisation harder. That is the honest cost of
-FEC, and this design accepts it only where diagnosis or cloud cost pays. Rook
-is the best prior art for the *whole policy stack* (EC pools, device classes,
-object store, replicated metadata), and it needs a Kubernetes cluster and OSDs
-in separate failure domains — which is the same "five distinct chunkservers"
-problem in a different costume.
+erasure coding, and this design takes only the much smaller cost of PAR2 bitrot
+parity. Rook is the best prior art for the *whole policy stack* (EC pools,
+device classes, object store, replicated metadata), and it needs a Kubernetes
+cluster and OSDs in separate failure domains — which is the same "five distinct
+chunkservers" problem in a different costume.
 
 ## The minimal system
 
@@ -223,7 +230,7 @@ Six pieces, one process boundary, four optional fronts.
 
 | piece | job | smallest implementation |
 | --- | --- | --- |
-| object format | one file → header + ciphertext (+ shards) + manifest entry | versioned header, AEAD, AAD binding id/version/name/length, extent Merkle |
+| object format | one file → header + ciphertext (+ optional PAR2 set) + manifest entry | versioned header, AEAD, AAD binding id/version/name/length, extent Merkle |
 | index | resolve object, copies, keys, state | SQLite cache over manifests; optionally replicated encrypted to a managed store |
 | key daemon | hold the root key, unwrap KEKs, select by caller | systemd service, credential-loaded root key, unix socket, uid check |
 | backends | read/write on each medium | adapter per class: local dir, USB/SMR append-only pack, S3-compatible, cold |
@@ -236,12 +243,13 @@ all for `git` (a bare repository in a bucket is enough).
 
 The data path is short and testable:
 
-- **write**: encrypt → (shard if cold) → write to the hot backend → commit the
-  manifest entry in one atomic act → enqueue the copy.
-- **read**: resolve → read the nearest copy → verify → decrypt; rebuild a
-  missing shard from k−1 others, verify, queue the repair.
-- **scrub**: walk manifests by age, verify every copy, re-encode where cheap,
-  repair failures, record the last-good time and the extent state.
+- **write**: encrypt → write to the hot backend → (PAR2 over the ciphertext for
+  a `-fec` folder) → commit the manifest entry in one atomic act → enqueue the
+  copy.
+- **read**: resolve → read the nearest copy → verify → decrypt; a damaged block
+  is repaired from its parity, a missing copy is restored from another.
+- **scrub**: walk manifests by age, verify every copy, repair bitrot where the
+  parity allows, record the last-good time and the block state.
 
 The failure model is narrower than a cluster's, which is the point: process
 crash, device loss, bit rot, provider outage, key loss, host loss. No
@@ -254,7 +262,7 @@ partitions, no split brain, no stale caches.
 | Btrfs multi-device RAID1c2 → one filesystem per device | degraded mounts, `btrfs device remove`, ENOSPC on rebalance, USB correlation | placement and copies move up | take it |
 | LUKS on media that already holds only ciphertext | the unlock/park lifecycle, the Infisical fetch, the member sweep | one defence-in-depth layer if the object layer has a bug | take it for cloud and cold; keep it on hot local disks |
 | per-workload key agents → one key daemon | N services, N sockets, N upgrades | one process holds every KEK | take it |
-| EC across latency domains → EC inside one local set, whole-object copies to cloud | repair reads from cold storage | cloud stores a full copy, not a share | take it |
+| EC across latency domains → parity per object, copies across domains | repair reads from cold storage | cloud stores a full copy, not a share | take it |
 | the PVC abstraction | the provisioning layer | nothing on one host: a PV is a directory and a bind | take it; [the volume research](files-and-volumes.md) already records that the minimal provisioner is mkdir/rm |
 | CoW filesystems on SMR | random-write amplification | no snapshots on that disk | take it: append-only packs on ext4 |
 | FUSE for every workload | a daemon, a mount graph, an ownership model | only the `files` rung remains | take it with the ladder |
@@ -302,9 +310,9 @@ Most of R1–R5 is available today from mature parts, arranged along the ladder:
 | rung | component | gives | does not |
 | --- | --- | --- | --- |
 | git | a forge, or a bare repo in a bucket | integrity, versioning, review | large binaries (git LFS pushes them to `object`) |
-| object | restic to two backends; rclone to two providers | encrypted packs, index, `check --read-data`, prune, per-file restore | live POSIX, FEC |
-| object, cold | par2 over immutable packs | plain-file parity, repair without a daemon | batch, offline, no placement |
-| files | one gocryptfs mount per workload, key in a systemd credential | per-file AEAD, encrypted names, kernel uid checks | one key per mount, no FEC, structure leaks |
+| object | restic to two backends; rclone to two providers | encrypted packs, index, `check --read-data`, prune, per-file restore | live POSIX, per-object bitrot parity |
+| object, cold | par2 over the ciphertext | repair and verification without a daemon or the key | batch, offline, no placement |
+| files | one gocryptfs mount per workload, key in a systemd credential | per-file AEAD, encrypted names, kernel uid checks | one key per mount, no parity, structure leaks |
 | block | a LUKS'd LV or zvol bound into the container | a raw device without a storage product | snapshots, replication |
 | index | the manifests plus a local SQLite cache; optionally replicated encrypted to a managed store | a rebuildable index, offsite durability | server-side search over plaintext |
 
@@ -333,7 +341,8 @@ engine design would otherwise guess at, and it is reversible.
 - **Components:** the six above, plus the S3 front (required), the FUSE front
   (optional), and the block front (an exception, not a product).
 - **Tests, not claims:** kill the process mid-commit; pull one device; make one
-  provider return 500s; corrupt one shard and prove the report names it; lose
+  provider return 500s; corrupt a block and prove the verifier names it and the
+  parity repairs it; lose
   the index and rebuild from manifests; replay an old signed root and prove it
   is rejected; lose a key and prove the rest still opens; restore on a clean
   host from ciphertext, manifests and the key alone; fill the pool to ENOSPC;
@@ -347,7 +356,8 @@ engine design would otherwise guess at, and it is reversible.
 ## Issues that will bite
 
 1. **Crash consistency is the whole game.** A commit is one atomic act — a
-   manifest rename or a conditional PUT — after the shards are durable. Any
+   manifest rename or a conditional PUT — after the object, and its parity, is
+   durable. Any
    other ordering leaves an object that looks present and is not.
 2. **Authority over the index, not just its reliability.** If the index is
    derivable, a managed store is a convenience; if it is authoritative, the
@@ -356,9 +366,9 @@ engine design would otherwise guess at, and it is reversible.
 3. **Replication without an anchor is theatre.** Two copies that disagree are
    two claims; only a hash anchored outside both decides. The signed head is
    not optional.
-4. **FEC across latency domains is a trap.** A repair that reads three shards
-   from cold storage takes hours; keep EC inside one local set and copy whole
-   objects to the cloud.
+4. **Parity stays with its object.** A repair that reads parity from cold
+   storage takes as long as the object does; keep the parity set next to the
+   object, and treat copies as the availability mechanism, not parity.
 5. **Cold retrieval is not POSIX.** Object stores make you ask, wait, then
    read. Model a retrieval state and let reads block with a deadline, or expose
    `recall` and accept that the POSIX view is warm-only.
@@ -370,7 +380,7 @@ engine design would otherwise guess at, and it is reversible.
    which version it answered from; a monotonic counter and signed root are
    still required.
 8. **SMR hates rewrites.** Append-only packs, zone-aligned writes, no CoW
-   filesystem, no in-place shard repair — rebuild into a new pack and retire
+   filesystem, no in-place object repair — rebuild into a new object and retire
    the old one.
 9. **FUSE is an operational surface:** `RequiresMountsFor=` does not order a
    userspace mount, a hung daemon puts `umount` in `D` state, rootless Podman
@@ -396,14 +406,15 @@ Three branches, in increasing order of work.
 **A. Withdraw the advanced priorities.** If what is wanted is "PV/PVC without
 hand-written scripts, snapshots, and an offsite copy", then k3s/k0s + Longhorn
 is the smallest supported answer, with per-volume LUKS and S3 backups. It is
-block storage: no per-file keys, no file-level FEC, no plain-file restore.
+block storage: no per-file keys, no file-level parity, no plain-file restore.
 Choose it deliberately, not as a step towards the brief.
 
 **B. Keep the priorities, stay single-host, compose first (recommended).**
 Keep LUKS and one filesystem per device; drop RAID1c2. Sort the workloads along
 the ladder — `git` and `object` first, `files` only where the application
 demands it, `block` as an exception. Run gocryptfs per `files` workload, restic
-to two backends for cold and backup, par2 on the immutable packs, rclone for
+to two backends for cold and backup, par2 over the ciphertext where bitrot
+repair is wanted, rclone for
 the offsite copy, systemd timers for scrub and tiering. Put the index on the
 manifests with a local cache, replicated encrypted to a managed store only if
 rebuilds become painful. Build only the glue: key wraps, a verify/drain tool, a
@@ -419,8 +430,8 @@ block workload appears.
 What the three cuts bought: the network is gone, most workloads never touch a
 filesystem, the index's reliability is either trivial (derivable) or bought
 from a provider with the confidentiality made explicit, and FEC is aimed at the
-question it actually answers — which bytes are good, and what is left when
-they are not.
+question it actually answers — which blocks are good, and can the bad ones be
+rebuilt without the key.
 
 ## Open questions
 
