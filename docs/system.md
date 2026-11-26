@@ -71,7 +71,7 @@ src-dotfiles.sh ── DOTFILES_SOURCED re-entrancy guard (DR-027)
 | `docs/research/multi-uid-data-access.md` | per-uid read-only/read-write views of the shared mount: ACLs, bind mounts, rootless Podman, NFS/SFTP, and why `systemd-homed` is not the tool (draft) |
 | `docs/research/quadronegro-availability-and-threats.md` | member loss and the default stop chain, the strict/degraded policy options, and the physical-access ladder for the pool (draft) |
 | `docs/research/workload-isolation-and-egress.md` | per-workload uid, slice and netns isolation for syncthing/transmission/hister, the escape-to-root boundary, and UPnP/NAT under container and VM networking (draft) |
-| `docs/research/workload-provisioning.md` | one workload declaration rendered into sysusers/tmpfiles/slice/Quadlet/assertions, with a `promnesia` example (draft) |
+| `docs/research/workload-provisioning.md` | one workload declaration rendered into sysusers/tmpfiles/slice/Quadlet/assertions, with a `promnesia` example; and the rolling-build image model with family locks as the rollback escape hatch (draft) |
 | `docs/research/gpu-and-display-isolation.md` | GPU/driver boundary, render-node rules, compute-vs-display contention, graphical session shapes and the display-multiplexing question (draft) |
 | `shortcuts/tasks/sshd.sh` | Termux:Widget background task — restart sshd and toast its status (was embedded in `termux-shortcuts.html`); copied verbatim to `~/.shortcuts/tasks/sshd.sh` by `deploy.sh` (DR-036) |
 | `shortcuts/tasks/ip.sh` | Termux:Widget background task — **sole producer of `ip.json`** for Markor, plus a toast of the primary IPv4 (DR-009, DR-036, DR-038); copied to `~/.shortcuts/tasks/ip.sh` by `deploy.sh` |

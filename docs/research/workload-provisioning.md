@@ -257,6 +257,82 @@ kinds that this flow needs:
 small, per [guards and steps](guards-and-steps.md): an idempotent verb beats a
 probe.
 
+## Images: rolling by default, locks as the escape hatch
+
+The image flow is **rolling release**, deliberately: rebuild on the latest
+platform, verify, promote the newest digest, keep the previous digest as the
+rollback target. Locks are not the default deployment mode; they are what gets
+added *after* a regression is diagnosed, and then only for the package family
+that regressed. A rolling channel without a recorded digest has no rollback
+target at all, which is why the digest lockfile is the part that matters here.
+
+Two axes, and they answer different failures:
+
+| symptom | action | declared as |
+| --- | --- | --- |
+| one package family regressed, diagnosis is clear | lock that family to a known-good EVR, rebuild on today's platform, verify, promote the new digest | `lock[]` entry |
+| failure not attributed yet, or platform-wide | redeploy the previous digest and bisect offline | `good[]` history |
+| lock survived to its review date | re-evaluate: unlock, rebuild, verify, promote | `review` date |
+
+```json
+{"images": [{
+  "name": "filesynchronization",
+  "channel": "ghcr.io/empjustine/filesynchronization:latest",
+  "deploy": "sha256:<current>",
+  "good":   ["sha256:<previous>"],
+  "lock": [{
+    "packages": ["transmission-*", "libtransmission*"],
+    "evr": "4.1.3-2.fc45",
+    "since": "2026-11-25",
+    "reason": "4.1.4 RPC auth regression, <upstream issue>",
+    "verify": ["transmission-remote --session-info"],
+    "review": "2027-02-01"
+  }]
+}]}
+```
+
+Four rules make a lock actually hold:
+
+1. **Lock the family, not the binary.** Fedora splits `transmission-daemon`
+   from `transmission-common`, `transmission-cli` and `libtransmission`; when
+   the daemon's dependency is `>=` rather than exact, pinning the daemon alone
+   yields daemon 4.1.3 with `libtransmission` 4.1.4 — the mixed ABI the lock
+   was meant to prevent. Lock every subpackage that carries the ABI
+   (`transmission-*`, `libtransmission*`).
+2. **Spell the pin as an EVR without the architecture** (`4.1.3-2.fc45`), so
+   the same declaration serves an amd64 and an arm64 build; `dnf install
+   <name>-<evr>` resolves the arch. An `x86_64`-qualified lock cannot be
+   reused.
+3. **`--no-plugins` disables `versionlock`.** The Containerfile runs dnf with
+   `--no-plugins`, so a `versionlock`-based lock silently does nothing there:
+   either enable the plugin for that step or use exact-NEVRA installs plus
+   `--setopt=exclude=<newer evr>`, keeping the upgrade-before-install order the
+   Containerfile already has.
+4. **`updates-archive` is a retention window, not an archive.** A build that
+   names `transmission-daemon-4.1.3-2.fc45` works until the archive rotates,
+   then fails with a resolve error. Two durable spellings: keep the RPMs
+   (`dnf download --resolve` into a local repo), or keep the built image — the
+   digest *is* the pinned combination, so redeploying it never needs the
+   archive. With rolling as the default, the digest is the cheap one.
+
+Two parts of this stay judgement, not manifest fields:
+
+- **Dependency conflicts.** When a locked family blocks a required upgrade,
+  dnf either fails (loudly, which is right) or someone decides
+  `--nobest`/`--allowerasing`. The manifest records the outcome, not the
+  reasoning.
+- **The regression verdict.** `verify` is a check with a pass/fail threshold —
+  the post-step verification the allocator still lacks — and it must be the
+  check that failed before, not a generic health probe, or the lock has no
+  justification. `review` is a security control for the same reason: a held-back
+  package stops receiving security fixes, so an overdue lock is worse than the
+  regression it avoids.
+
+Not built, and not the current flow: the rolling pipeline remains "rebuild on
+the latest platform, verify, promote"; the `lock[]` axis is recorded here so a
+diagnosed regression has a declarative home instead of a hand-edited
+Containerfile in another repository.
+
 ## What has to be built, and what must not be
 
 Build:
