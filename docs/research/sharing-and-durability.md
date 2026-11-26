@@ -119,6 +119,37 @@ and small-file metadata operations to be several times slower than a kernel
 filesystem. Measure on this hardware before promising numbers; the design
 should record the measured figure next to the choice.
 
+### When a block fails
+
+gocryptfs is the reference implementation for what a per-block AEAD filesystem
+does with damage, and it sets the expectation for our daemon:
+
+- a file is an 18-byte header (version, file id) followed by independently
+  encrypted 4 KiB blocks, each with its own 16-byte nonce and 16-byte tag
+  (`Documentation/file-format.md`);
+- a corrupt block makes a read return `EIO` for every request that touches it.
+  The daemon logs the block number, and the rest of the file stays readable
+  (`internal/fusefrontend/file.go`, `doRead`);
+- a corrupt header makes the whole file `EIO`: the file id is needed to decrypt
+  anything, so there is no “rest” to salvage;
+- nothing is zero-filled or silently skipped. A recovery tool sees a hole it
+  can map: 4 KiB-aligned reads isolate the bad block, and a `ddrescue`-style
+  tool copies the rest and leaves the hole behind;
+- the failure is per **FUSE request**, not per block. A 128 KiB read that
+  crosses one bad 4 KiB block fails as a whole, so a sequential reader that
+  issues large reads stops at the gap even though 124 KiB of it were fine. The
+  rest is recoverable by re-reading in block-sized pieces, not by the kernel
+  retrying;
+- detection is all it can do. There is no redundancy inside gocryptfs, so the
+  bad block stays bad. `gocryptfs -fsck` enumerates the corrupt files; it does
+  not repair them.
+
+That is exactly the gap PAR2 fills: repair the ciphertext block, then let the
+AEAD verify it on the next read. It is also why the parity blocks should be
+small: the damage unit of the encryption layer is 4 KiB, so a parity block of
+64–256 KiB already covers a meaningful run of bad blocks without wasting much
+on a single byte flip.
+
 ### The performance escape hatch, and why it is not the default
 
 Kernel `fscrypt` on ext4/f2fs gives per-directory keys with no userspace
