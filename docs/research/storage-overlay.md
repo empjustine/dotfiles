@@ -263,7 +263,10 @@ chunkservers" problem in a different costume.
 
 ## The minimal system
 
-Six pieces, one process boundary, four optional fronts.
+Five pieces, one process boundary, four optional fronts. Copies and parity are
+**one** durability layer: they share the object boundary, the domain model, the
+commit record, the verify/repair loop and the failure semantics, and splitting
+them creates two commit points for one decision.
 
 | piece | job | smallest implementation |
 | --- | --- | --- |
@@ -271,8 +274,7 @@ Six pieces, one process boundary, four optional fronts.
 | index | resolve object, copies, keys, state | SQLite cache over manifests; optionally replicated encrypted to a managed store |
 | key daemon | hold the root key, unwrap KEKs, select by caller | systemd service, credential-loaded root key, unix socket, uid check |
 | backends | read/write on each medium | adapter per class: local dir, USB/SMR append-only pack, S3-compatible, cold |
-| placement/tier | hot/cold/trash, copy targets, age rules | a table per directory plus a queue |
-| verifier/repairer | hash, decode, re-encode, report | a timer job with a report file, like `restic check --read-data` |
+| durability | copies, parity, placement, tier, drain, verify, repair | a policy per directory; a placement table; the PAR2 codec as a library; a timer job that reports like `restic check --read-data` |
 
 Fronts, each enabled only when a rung exists: an S3-compatible endpoint for
 `object`, a FUSE mount for `files`, a LUKS'd LV/zvol for `block`, and nothing at
@@ -283,10 +285,42 @@ The data path is short and testable:
 - **write**: encrypt → write to the hot backend → (PAR2 over the ciphertext for
   a `-fec` folder) → commit the manifest entry in one atomic act → enqueue the
   copy.
-- **read**: resolve → read the nearest copy → verify → decrypt; a damaged block
-  is repaired from its parity, a missing copy is restored from another.
+- **read**: resolve → choose copies → verify → decrypt; a damaged segment is
+  retried from another copy, repaired from parity if no copy survives, and
+  reported as unrecoverable only for its own range.
 - **scrub**: walk manifests by age, verify every copy, repair bitrot where the
   parity allows, record the last-good time and the block state.
+
+### Read path: power, striping, corruption
+
+The read side is where the copies pay for themselves, and where the policy has
+to be explicit about power.
+
+- **Idle disks.** The scheduler carries a state per device — `active`, `idle`,
+  `standby`, `sleeping`, `failed` — plus a wake latency and a throughput
+  estimate. Spin-down is deliberate (`hdparm -S`, `hd-idle`, `sg_start`), not
+  left to firmware defaults, and scrub/parity work is batched so it does not
+  wake a disk once per object. The index and manifests stay on always-on media,
+  or every lookup defeats the exercise.
+- **Choosing a copy.** Prefer a copy on an awake device; if none is awake, wake
+  the cheapest and fastest one, not all of them. A `files` folder that needs
+  low latency keeps at least one copy on an always-on device; a cold archive
+  does not.
+- **Striped reads.** All copies are complete objects, so the reader can split a
+  request into **large contiguous chunks** — one per copy, one per disk — and
+  read them in parallel. Contiguous chunks keep each disk sequential; 4 KiB
+  interleaving would turn a sequential read into random I/O on every device.
+  This uses the full bandwidth of the *online* disks, which is a different
+  policy from waking every disk to stripe.
+- **Corruption on the read path.** Verification is per segment, so a bad segment
+  in one copy fails only that segment: retry it from another copy, and if all
+  copies fail for that range, repair from that copy's PAR2 set. If the damage
+  exceeds the parity budget, return `EIO` for that range and keep serving the
+  rest — the gocryptfs hole, with a fallback in front of it.
+- **A read is not a repair.** A read that falls back to a second copy records
+  the first copy's bad segment; the repair job then rebuilds it in the
+  background, so the read path stays fast and the write path stays the only
+  place that waits.
 
 The failure model is narrower than a cluster's, which is the point: process
 crash, device loss, bit rot, provider outage, key loss, host loss. No

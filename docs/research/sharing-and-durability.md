@@ -211,24 +211,30 @@ interface.
 | layer | interface | sees plaintext | sees keys | can be separate |
 | --- | --- | --- | --- | --- |
 | crypto | `seal(plaintext) → object`, `open(object) → plaintext` | yes | the DEK | a library, in-process |
-| placement | `put(object, policy) → committed copies`, `get(id) → bytes` | no | no | a daemon or a library |
-| parity | `attach(object) → par2 set`, `verify`, `repair` | no | no | a keyless worker |
+| durability | `put(object, policy) → committed copies`, `get(id) → bytes`, `verify`, `repair`, `drain` | no | no | a daemon or a library |
 | index | `record(object, copies, parity)`, `query` | no (opaque ids) | no | a local database, derivable |
 | key custody | `unwrap(workload) → KEK` | no | the KEKs | a daemon, off the I/O path |
 | FUSE + ack coordinator | `read`/`write`/`fsync`, calls the four above | yes (it is the adapter) | via crypto | must be at the FUSE boundary |
 
+Copies and parity are merged into one **durability** layer on purpose. They
+share the object boundary, the domain model, the manifest entry, the commit
+order and the repair loop; keeping them apart gives one decision two commit
+points. The PAR2 codec stays a pure library inside the layer — the layer
+decides *when* to call it (synchronously for a `-fec` folder, lazily at tiering
+otherwise), *where* the set goes, and what the acknowledgement waits for.
+
 The consequences are exactly what a composite buys:
 
-- **placement is ciphertext-only**, which is what makes the provider threat
+- **durability is ciphertext-only**, which is what makes the provider threat
   model true and lets the `object` rung use the same layer without FUSE;
-- **parity needs no key**, so a blind restorer can run verify and repair;
+- **its codec needs no key**, so a blind restorer can run verify and repair;
 - **the coordinator is thin**: it orders data → copies → parity → manifest and
   implements the markers; it is where the layers meet, not where they are
   implemented;
-- **non-FUSE workloads** (S3, git) call crypto and placement directly and get an
-  explicit commit — no FUSE, no `fsync` semantics, no markers;
-- **each layer is testable alone**: crypto with test vectors, placement with a
-  fault-injecting backend, parity with corrupted blocks, the coordinator with
+- **non-FUSE workloads** (S3, git) call crypto and durability directly and get
+  an explicit commit — no FUSE, no `fsync` semantics, no markers;
+- **each layer is testable alone**: crypto with test vectors, durability with a
+  fault-injecting backend, PAR2 with corrupted blocks, the coordinator with
   crash injection.
 
 The cost is one more interface and a commit protocol that spans layers. Keep
@@ -479,8 +485,36 @@ surviving object**, and its shape follows from that:
   size and the hashes, not the plaintext name. Do not encrypt the parity set —
   that would defeat blind verification — and do not put plaintext names in it.
 - **Tooling.** `par2cmdline-turbo` is the mature, multithreaded
-  implementation. PAR3 is a newer specification with better hashing but thinner
-  tooling; the contract names the properties, not the binary.
+  implementation; PAR3 is a newer specification with better hashing but thinner
+  tooling. The contract names the properties, not the binary.
+
+### Implementations, and whether to write one
+
+PAR2 is a published format with several independent implementations; PAR3 is
+not ready.
+
+| implementation | language | state |
+| --- | --- | --- |
+| `par2cmdline-turbo` | C++ | the performance and compatibility reference: ParPar's SIMD backend, roughly 7× stock `par2cmdline` in published benchmarks |
+| `libpar2` | C++ | the older library behind several tools; usable, not fast |
+| `akalin/gopar` | Go | PAR1 and PAR2, pure Go, with a CLI; the longest-standing Go implementation |
+| `hobeone/par2engine`, `javi11/gopar-turbo`, `unxed/par2`, `joamag/parchive-go` | Go | newer pure-Go engines, some with assembly SIMD for the GF(2^16) loop; maturity varies, so read the tests and the issue tracker |
+| `mediactl/par2go` | Go + cgo-free shim | wraps `par2cmdline-turbo`'s library through `purego`; gets the mature engine without cgo, at the cost of a prebuilt `.so` |
+| `Parchive/par3cmdline`, `par3-rs` | C++, Rust | the PAR3 reference implementation is still in progress and the spec is an alpha draft; `par3-rs` follows the implementation where the two disagree |
+
+For the erasure-code math rather than the PAR2 container, the mature pieces are
+Intel ISA-L and `liberasurecode`/`Jerasure` (C, GF(2^8)), `klauspost/reedsolomon`
+(Go, widely used and SIMD-accelerated), and `reed-solomon-simd` (Rust). PAR2's
+GF(2^16) is what allows up to 32768 blocks per file; GF(2^8) libraries cap the
+shard count far lower, which is why a custom GF(2^8) format would need per-chunk
+sets.
+
+So: do not write the codec. Use `par2cmdline-turbo` (directly or through
+`par2go`) when performance and format compatibility matter, or a pure-Go
+implementation when a static binary and no cgo matter more. Writing one is
+only justified if the container format has to differ from PAR2 — and then the
+GF math still comes from a library, and the blind-restorer compatibility the
+format was chosen for is lost.
 
 ### Copies, shards and domains
 
